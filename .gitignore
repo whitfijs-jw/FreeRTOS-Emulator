@@ -1,2 +1,5 @@
 FreeRTOS_Posix
 bin/*
+.cproject
+.project
+.settings
