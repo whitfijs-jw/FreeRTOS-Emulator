@@ -14,7 +14,6 @@ set(CMAKE_MAKEFILE_DEPENDS
   "../cmake/FindSDL2.cmake"
   "../cmake/FindSDL2_gfx.cmake"
   "../cmake/FindSDL2_image.cmake"
-  "../cmake/FindSDL2_ttf.cmake"
   "/usr/share/cmake-3.14/Modules/CMakeCInformation.cmake"
   "/usr/share/cmake-3.14/Modules/CMakeCXXInformation.cmake"
   "/usr/share/cmake-3.14/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"

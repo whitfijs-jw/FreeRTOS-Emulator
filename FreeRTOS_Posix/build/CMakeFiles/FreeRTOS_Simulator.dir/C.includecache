@@ -8,14 +8,6 @@
 
 ../include/FreeRTOSConfig.h
 
-../lib/AsyncIO/include/AsyncIO.h
-
-../lib/AsyncIO/include/AsyncIOSerial.h
-
-../lib/AsyncIO/include/AsyncIOSocket.h
-
-../lib/AsyncIO/include/PosixMessageQueueIPC.h
-
 ../lib/FreeRTOS_Kernel/include/FreeRTOS.h
 stddef.h
 -
@@ -211,6 +203,8 @@ errno.h
 -
 unistd.h
 -
+math.h
+-
 FreeRTOS.h
 /home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/FreeRTOS.h
 task.h
@@ -225,12 +219,4 @@ TUM_Draw.h
 /home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/TUM_Draw.h
 TUM_Event.h
 /home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/TUM_Event.h
-AsyncIO.h
-/home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/AsyncIO.h
-AsyncIOSocket.h
-/home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/AsyncIOSocket.h
-PosixMessageQueueIPC.h
-/home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/PosixMessageQueueIPC.h
-AsyncIOSerial.h
-/home/alxhoff/git/GitHub/FreeRTOS-simulator-demo/FreeRTOS_Posix/src/AsyncIOSerial.h
 

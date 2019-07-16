@@ -3,10 +3,6 @@
 
 CMakeFiles/FreeRTOS_Simulator.dir/src/main.c.o
  ../include/FreeRTOSConfig.h
- ../lib/AsyncIO/include/AsyncIO.h
- ../lib/AsyncIO/include/AsyncIOSerial.h
- ../lib/AsyncIO/include/AsyncIOSocket.h
- ../lib/AsyncIO/include/PosixMessageQueueIPC.h
  ../lib/FreeRTOS_Kernel/include/FreeRTOS.h
  ../lib/FreeRTOS_Kernel/include/croutine.h
  ../lib/FreeRTOS_Kernel/include/list.h

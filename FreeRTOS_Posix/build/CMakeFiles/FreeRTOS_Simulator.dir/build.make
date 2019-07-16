@@ -82,7 +82,6 @@ FreeRTOS_Simulator_EXTERNAL_OBJECTS =
 ../bin/FreeRTOS_Simulator: /usr/lib/libSDL2.so
 ../bin/FreeRTOS_Simulator: /usr/lib/libSDL2main.a
 ../bin/FreeRTOS_Simulator: /usr/lib/libSDL2_gfx.so
-../bin/FreeRTOS_Simulator: /usr/lib/libSDL2_ttf.so
 ../bin/FreeRTOS_Simulator: /usr/lib/libSDL2_image.so
 ../bin/FreeRTOS_Simulator: libFREERTOS.so
 ../bin/FreeRTOS_Simulator: libGFX.so
