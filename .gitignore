@@ -1,5 +1,5 @@
 FreeRTOS_Posix
-*/bin/*
+*/bin/FreeRTOS_Simulator
 .cproject
 .project
 .settings
