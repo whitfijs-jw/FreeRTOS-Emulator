@@ -17,31 +17,31 @@
 
 extern xSemaphoreHandle DisplayReady;
 
-typedef struct coord{
-    unsigned short x;
-    unsigned short y;
-}coord_t;
+typedef struct coord {
+	unsigned short x;
+	unsigned short y;
+} coord_t;
 
-void vInitDrawing( void );
+void vInitDrawing(void);
 void vExitDrawing(void);
 void tumDrawDelay(int delay);
 void vDrawUpdateScreen(void);
 
 signed char tumDrawClear(unsigned int colour);
 signed char tumDrawEllipse(signed short x, signed short y, signed short rx,
-        signed short ry, unsigned int colour);
+		signed short ry, unsigned int colour);
 signed char tumDrawArc(signed short x, signed short y, signed short radius,
-        signed short start, signed short end, unsigned int colour);
-signed char tumDrawText(char *str, signed short x, signed short y, 
-        unsigned int colour);
-signed char tumDrawBox(signed short x, signed short y, signed short w, 
-        signed short h, unsigned int colour);
-signed char tumDrawFilledBox(signed short x, signed short y, signed short w, 
-        signed short h, unsigned int colour);
-signed char tumDrawCircle(signed short x, signed short y, signed short radius, 
-        unsigned int colour);
-signed char tumDrawLine(signed short x1, signed short y1, signed short x2, 
-        signed short y2, unsigned int colour);
+		signed short start, signed short end, unsigned int colour);
+signed char tumDrawText(char *str, signed short x, signed short y,
+		unsigned int colour);
+signed char tumDrawBox(signed short x, signed short y, signed short w,
+		signed short h, unsigned int colour);
+signed char tumDrawFilledBox(signed short x, signed short y, signed short w,
+		signed short h, unsigned int colour);
+signed char tumDrawCircle(signed short x, signed short y, signed short radius,
+		unsigned int colour);
+signed char tumDrawLine(signed short x1, signed short y1, signed short x2,
+		signed short y2, unsigned int colour);
 signed char tumDrawPoly(coord_t *points, int n, unsigned int colour);
 signed char tumDrawTriangle(coord_t *points, unsigned int colour);
 signed char tumDrawImage(char *filename, signed short x, signed short y);
