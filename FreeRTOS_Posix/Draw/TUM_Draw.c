@@ -8,6 +8,8 @@
 
 typedef enum{
     DRAW_CLEAR,
+    DRAW_ARC,
+    DRAW_ELLIPSE,
     DRAW_TEXT,
     DRAW_RECT,
     DRAW_FILLED_RECT,
@@ -18,26 +20,47 @@ typedef enum{
     DRAW_IMAGE
 }draw_job_type_t;
 
+typedef struct clear_data{
+    unsigned int colour;
+}clear_data_t;
+
+typedef struct arc_data{
+    signed short x;
+    signed short y;
+    signed short radius;
+    signed short start;
+    signed short end;
+    unsigned int colour;
+}arc_data_t;
+
+typedef struct ellipse_data{
+    signed short x;
+    signed short y;
+    signed short rx;
+    signed short ry;
+    unsigned int colour;
+}ellipse_data_t;
+
 typedef struct rect_data{
-    int x;
-    int y;
-    int w;
-    int h;
+    unsigned short x;
+    unsigned short y;
+    unsigned short w;
+    unsigned short h;
     unsigned int colour;
 }rect_data_t;
 
 typedef struct circle_date{
-    int x;
-    int y;
-    int radius;
+    unsigned short x;
+    unsigned short y;
+    unsigned short radius;
     unsigned int colour;
 }circle_data_t;
 
 typedef struct line_data{
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    unsigned short x1;
+    unsigned short y1;
+    unsigned short x2;
+    unsigned short y2;
     unsigned int colour;
 }line_data_t;
 
@@ -55,18 +78,21 @@ typedef struct triangle_data{
 typedef struct image_data{
     char *filename;
     SDL_Texture *tex;
-    int x;
-    int y;
+    unsigned short x;
+    unsigned short y;
 }image_data_t;
 
 typedef struct text_data{
     char *str;
-    int x;
-    int y;
+    unsigned short x;
+    unsigned short y;
     unsigned int colour;
 }text_data_t;
     
 union data_u{
+    clear_data_t clear;
+    arc_data_t arc;
+    ellipse_data_t ellipse;
     rect_data_t rect;
     circle_data_t circle;
     line_data_t line;
@@ -114,34 +140,53 @@ void logTTFError(char *msg){
         printf("[ERROR] %s, %s\n", msg, TTF_GetError());
 }
 
-void vClearDisplay(void)
+void vClearDisplay(unsigned int colour)
 {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer, (colour >> 16) & 0xFF, 
+            (colour >> 8) & 0xFF, colour & 0xFF, 255);
     SDL_RenderClear(renderer);
 }
 
-void vDrawRectangle(int x, int y, int w, int h, unsigned int colour){
+void vDrawRectangle(signed short x, signed short y, signed short w, 
+        signed short h, unsigned int colour){
 
     rectangleColor(renderer, x, y, x+w, y+h, SwapBytes((colour << 8) | 0xFF));
 }
 
-void vDrawFilledRectangle(int x, int y, int w, int h, unsigned int colour)
+void vDrawFilledRectangle(signed short x, signed short y, signed short w, 
+        signed short h, unsigned int colour)
 {
     boxColor(renderer, x, y, x+w, y+h, SwapBytes((colour << 8) | 0xFF));
 }
 
-void vDrawCircle(int x, int y, int radius, unsigned int colour){
+void vDrawArc(signed short x, signed short y, signed short radius, 
+        signed short start, signed short end, unsigned int colour)
+{
+    arcColor(renderer, x, y, radius, start, end, SwapBytes((colour << 8) | 0xFF));
+}
+
+void vDrawEllipse(signed short x, signed short y, signed short rx, 
+        signed short ry, unsigned int colour)
+{
+    ellipseColor(renderer, x, y, rx, ry, SwapBytes((colour << 8) | 0xFF));
+}
+
+void vDrawCircle(signed short x, signed short y, signed short radius, 
+        unsigned int colour)
+{
     filledCircleColor(renderer, x, y, radius, SwapBytes((colour << 8) | 0xFF));
 }
 
-void vDrawLine(int x1, int y1, int x2, int y2, unsigned int colour){
+void vDrawLine(signed short x1, signed short y1, signed short x2, signed short y2, 
+        unsigned int colour)
+{
     lineColor(renderer, x1, y1, x2, y2, SwapBytes((colour << 8) | 0xFF)); 
 }
 
-void vDrawPoly(coord_t *points, unsigned int n, int colour)
+void vDrawPoly(coord_t *points, unsigned int n, signed short colour)
 {
-    int16_t *x_coords = calloc(1, sizeof(int16_t) * n);
-    int16_t *y_coords = calloc(1, sizeof(int16_t) * n);
+    signed short *x_coords = calloc(1, sizeof(signed short) * n);
+    signed short *y_coords = calloc(1, sizeof(signed short) * n);
 
     for(unsigned int i = 0; i < n; i++){
         x_coords[i] = points[i].x;
@@ -253,7 +298,7 @@ SDL_Texture *loadImage(char *filename, SDL_Renderer *ren)
     return tex;
 }
 
-void vDrawScaledImage(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int h)
+void vDrawScaledImage(SDL_Texture *tex, SDL_Renderer *ren, unsigned short x, unsigned short y, unsigned short w, unsigned short h)
 {
     SDL_Rect dst;
     dst.w = w;
@@ -263,14 +308,14 @@ void vDrawScaledImage(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, 
     SDL_RenderCopy(ren, tex, NULL, &dst);
 }
 
-void vDrawImage(SDL_Texture *tex, SDL_Renderer *ren, int x, int y)
+void vDrawImage(SDL_Texture *tex, SDL_Renderer *ren, unsigned short x, unsigned short y)
 {
     int w, h;
     SDL_QueryTexture(tex, NULL, NULL, &w, &h); //Get texture dimensions
     vDrawScaledImage(tex, ren, x, y, w, h);
 }
 
-void vDrawLoadAndDrawImage(char *filename, SDL_Renderer *ren, int x, int y)
+void vDrawLoadAndDrawImage(char *filename, SDL_Renderer *ren, unsigned short x, unsigned short y)
 {
     SDL_Texture *tex = loadImage(filename, ren);
 
@@ -281,7 +326,7 @@ void vDrawRectImage(SDL_Texture *tex, SDL_Renderer *ren, SDL_Rect dst, SDL_Rect 
     SDL_RenderCopy(ren, tex, clip, &dst);
 }
 
-void vDrawClippedImage(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, SDL_Rect *clip){
+void vDrawClippedImage(SDL_Texture *tex, SDL_Renderer *ren, unsigned short x, unsigned short y, SDL_Rect *clip){
     SDL_Rect dst;
     dst.x = x;
     dst.y = y;
@@ -296,7 +341,7 @@ void vDrawClippedImage(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, SDL_Re
     vDrawRectImage(tex, ren, dst, clip);
 }
 
-void vDrawText(char *string, int x, int y, unsigned int colour)
+void vDrawText(char *string, unsigned short x, unsigned short y, unsigned int colour)
 {
     stringColor(renderer, x, y, string, SwapBytes((colour << 8) | 0xFF));
 }
@@ -306,7 +351,17 @@ void vHandleDrawJob(draw_job_t *job){
 
     switch(job->type){
         case DRAW_CLEAR:
-            vClearDisplay();
+            vClearDisplay(job->data->clear.colour);
+            break;
+        case DRAW_ARC:
+            vDrawArc(job->data->arc.x, job->data->arc.y, job->data->arc.radius,
+                    job->data->arc.start, job->data->arc.end, 
+                    job->data->arc.colour);
+            break;
+        case DRAW_ELLIPSE:
+            vDrawEllipse(job->data->ellipse.x, job->data->ellipse.y,
+                    job->data->ellipse.rx, job->data->ellipse.ry,
+                    job->data->ellipse.colour);
             break;
         case DRAW_TEXT:
             vDrawText(job->data->text.str, job->data->text.x, 
@@ -376,7 +431,8 @@ void logCriticalError(char *msg){
     exit(-1);
 }
 
-signed char tumDrawText(char *str, int x, int y, unsigned int colour)
+signed char tumDrawText(char *str, signed short x, signed short y, 
+        unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_TEXT};
 
@@ -394,8 +450,50 @@ signed char tumDrawText(char *str, int x, int y, unsigned int colour)
 
     return 0;
 }
+
+signed char tumDrawEllipse(signed short x, signed short y, signed short rx,
+        signed short ry, unsigned int colour)
+{
+    draw_job_t job = {.type = DRAW_ELLIPSE};
+
+    CREATE_JOB(ellipse);
+
+    job.data->ellipse.x = x;
+    job.data->ellipse.y = y;
+    job.data->ellipse.rx = rx;
+    job.data->ellipse.ry = ry;
+    job.data->ellipse.colour = colour;
+
+    if(xQueueSend(drawJobQueue, &job, portMAX_DELAY) != pdTRUE)
+        return -1;
+
+    return 0;
+
+}
+
+signed char tumDrawArc(signed short x, signed short y, signed short radius,
+        signed short start, signed short end, unsigned int colour)
+{
+    draw_job_t job = {.type = DRAW_ARC};
+
+    CREATE_JOB(arc);
+
+    job.data->arc.x = x;
+    job.data->arc.y = y;
+    job.data->arc.radius = radius;
+    job.data->arc.start = start;
+    job.data->arc.end = end;
+    job.data->arc.colour = colour;
+
+    if(xQueueSend(drawJobQueue, &job, portMAX_DELAY) != pdTRUE)
+        return -1;
+
+    return 0;
+
+}
         
-signed char tumDrawFilledBox(int x, int y, int w, int h, unsigned int colour)
+signed char tumDrawFilledBox(signed short x, signed short y, signed short w, 
+    signed short h, unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_FILLED_RECT};
 
@@ -413,7 +511,8 @@ signed char tumDrawFilledBox(int x, int y, int w, int h, unsigned int colour)
     return 0;
 }
 
-signed char tumDrawBox(int x, int y, int w, int h, unsigned int colour)
+signed char tumDrawBox(signed short x, signed short y, signed short w, 
+        signed short h, unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_RECT};
 
@@ -431,9 +530,13 @@ signed char tumDrawBox(int x, int y, int w, int h, unsigned int colour)
     return 0;
 }
 
-signed char tumDrawClear(void)
+signed char tumDrawClear(unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_CLEAR};
+
+    CREATE_JOB(clear);
+
+    job.data->clear.colour = colour;
 
     if(xQueueSend(drawJobQueue, &job, portMAX_DELAY) != pdTRUE)
         return -1;
@@ -441,7 +544,7 @@ signed char tumDrawClear(void)
     return 0;
 }
 
-signed char tumDrawCircle(int x, int y, unsigned int radius, 
+signed char tumDrawCircle(signed short x, signed short y, signed short radius, 
         unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_CIRCLE};
@@ -459,7 +562,8 @@ signed char tumDrawCircle(int x, int y, unsigned int radius,
     return 0;
 }
 
-signed char tumDrawLine(int x1, int y1, int x2, int y2, unsigned int colour)
+signed char tumDrawLine(signed short x1, signed short y1, signed short x2, 
+        signed short y2, unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_LINE};
 
@@ -477,7 +581,7 @@ signed char tumDrawLine(int x1, int y1, int x2, int y2, unsigned int colour)
     return 0;
 }
 
-signed char tumDrawPoly(coord_t *points, unsigned int n, unsigned int colour)
+signed char tumDrawPoly(coord_t *points, int n, unsigned int colour)
 {
     draw_job_t job = {.type = DRAW_POLY};
 
@@ -508,7 +612,7 @@ signed char tumDrawTriangle(coord_t *points, unsigned int colour)
     return 0;
 }
 
-signed char tumDrawImage(char *filename, int x, int y)
+signed char tumDrawImage(char *filename, signed short x, signed short y)
 {
     draw_job_t job = {.type = DRAW_IMAGE};
 

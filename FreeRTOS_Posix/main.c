@@ -185,7 +185,7 @@ void vDemoTask1 ( void *pvParameters )
             if(buttons.f)    
                 xQueueSend(StateQueue, &prev_state_signal, 100);
 
-            tumDrawClear();
+            tumDrawClear(Aqua);
 
             tumDrawFilledBox(caveX - cave_thickness, caveY - cave_thickness, 
                     caveSizeX + cave_thickness * 2, caveSizeY + cave_thickness * 2, 
@@ -226,8 +226,10 @@ void vDemoTask2 (void *pvParameters )
             if(buttons.f)    
                 xQueueSend(StateQueue, &prev_state_signal, 100);
 
-            tumDrawClear();
+            tumDrawClear(Aqua);
             tumDrawCircle(200, 200, 100, 0xFF00FF);
+            tumDrawArc(300, 300, 50, 0, 180, 0xFF00FF);
+            tumDrawEllipse(400, 400, 70, 30, 0xFF00FF);
         }
     }
 }
