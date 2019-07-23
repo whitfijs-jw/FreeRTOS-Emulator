@@ -122,7 +122,7 @@ void vEventsTask(void *pvParameters) {
 				mouse.y = event.motion.y;
 				xSemaphoreGive(mouse.lock);
 			} else {
-				printf("Other event: %d\n", event.type);
+                ;
 			}
 		}
 
