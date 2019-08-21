@@ -212,6 +212,9 @@ void vDemoTask2(void *pvParameters) {
 	const signed short path_radius = 75;
 	const unsigned char rotation_steps = 255;
 	const char str[] = "Hello World";
+    unsigned int text_width, text_height;
+
+    tumGetTextSize((char *) str, &text_width, &text_height);
 
 	float rotation = 0;
 
@@ -233,27 +236,21 @@ void vDemoTask2(void *pvParameters) {
 			tumDrawClear(White);
 
 			tumDrawCircle(
-			SCREEN_WIDTH / 2 + 2 * path_radius * cos(rotation) - 25,
-			SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation) - 25, 25,
+			SCREEN_WIDTH / 2 + 2 * path_radius * cos(rotation),
+			SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation), 25,
 			Green);
 
-			tumDrawFilledBox(
-					SCREEN_WIDTH / 2
-							+ 2 * path_radius
-									* cos(fmod(rotation + 2 * PI / 3, 2 * PI))
-							- 25,
-					SCREEN_HEIGHT / 2
-							+ 2 * path_radius
-									* sin(fmod(rotation + 2 * PI / 3, 2 * PI))
-							- 25, 50, 50, Blue);
+			tumDrawFilledBox(SCREEN_WIDTH / 2 + 2 * path_radius
+					* cos(fmod(rotation + 2 * PI / 3, 2 * PI)),
+					SCREEN_HEIGHT / 2 + 2 * path_radius
+					* sin(fmod(rotation + 2 * PI / 3, 2 * PI)), 
+                    50, 50, Blue);
 
 			tumDrawText((char*)str,
-					SCREEN_WIDTH / 2
-							+ 2 * path_radius
-									* cos(fmod(rotation + 4 * PI / 3, 2 * PI)),
-					SCREEN_HEIGHT / 2
-							+ 2 * path_radius
-									* sin(fmod(rotation + 4 * PI / 3, 2 * PI)),
+					SCREEN_WIDTH / 2 + 2 * path_radius 
+                        * cos(fmod(rotation + 4 * PI / 3, 2 * PI)) - text_width,
+					SCREEN_HEIGHT / 2 + 2 * path_radius
+						* sin(fmod(rotation + 4 * PI / 3, 2 * PI)) + text_height,
 					Red);
 		}
 	}
