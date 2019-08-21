@@ -6,7 +6,6 @@
 #include "task.h"
 #include "semphr.h"
 #include "queue.h"
-#include "croutine.h"
 
 #include "TUM_Draw.h"
 #include "TUM_Event.h"
