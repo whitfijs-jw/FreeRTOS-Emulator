@@ -10,8 +10,6 @@
 #include "TUM_Draw.h"
 #include "TUM_Event.h"
 
-/** #include "AsyncIOSerial.h" */
-
 #define mainGENERIC_PRIORITY	( tskIDLE_PRIORITY )
 #define mainGENERIC_STACK_SIZE  ( ( unsigned short ) 2560 )
 
@@ -43,9 +41,7 @@ const unsigned char prev_state_signal = PREV_TASK;
 
 TaskHandle_t DemoTask1 = NULL;
 TaskHandle_t DemoTask2 = NULL;
-
 QueueHandle_t StateQueue = NULL;
-
 SemaphoreHandle_t DrawReady = NULL;
 
 /*
@@ -185,7 +181,6 @@ void vDemoTask1(void *pvParameters) {
                     buttons.f);
 
             tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
-            //TODO text height and length
 
             circlePositionX = caveX + xGetMouseX() / 2;
             circlePositionY = caveY + xGetMouseY() / 2;
