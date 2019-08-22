@@ -48,12 +48,12 @@ TaskHandle_t DemoTask2 = NULL;
 QueueHandle_t StateQueue = NULL;
 SemaphoreHandle_t DrawReady = NULL;
 
-typedef struct buttons_buffer{
+typedef struct buttons_buffer {
 	unsigned char buttons[SDL_NUM_SCANCODES];
-    SemaphoreHandle_t lock;
+	SemaphoreHandle_t lock;
 } buttons_buffer_t;
 
-buttons_buffer_t buttons = {0};
+buttons_buffer_t buttons = { 0 };
 
 /*
  * Changes the state, either forwards of backwards
@@ -147,9 +147,9 @@ void vSwapBuffers(void *pvParameters) {
 #define KEYCODE(CHAR)       SDL_SCANCODE_##CHAR
 
 void xGetButtonInput(void) {
-    xSemaphoreTake(buttons.lock, portMAX_DELAY);
+	xSemaphoreTake(buttons.lock, portMAX_DELAY);
 	xQueueReceive(inputQueue, &buttons, 0);
-    xSemaphoreGive(buttons.lock);
+	xSemaphoreGive(buttons.lock);
 }
 
 void vDemoTask1(void *pvParameters) {
@@ -165,61 +165,63 @@ void vDemoTask1(void *pvParameters) {
 	const uint16_t caveY = SCREEN_HEIGHT / 2 - caveSizeY / 2;
 	uint16_t circlePositionX = caveX, circlePositionY = caveY;
 
-	char str[100] = {0};
+	char str[100] = { 0 };
 
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
 
-            xGetButtonInput();
+			xGetButtonInput();
 
-            xSemaphoreTake(buttons.lock, portMAX_DELAY);
-            if (buttons.buttons[KEYCODE(E)]){
-                xSemaphoreGive(buttons.lock);
-                xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
-                goto already_unlocked;
-            }
-            if (buttons.buttons[KEYCODE(F)]){
-                xSemaphoreGive(buttons.lock);
-                xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
-                goto already_unlocked;
-            }
-            xSemaphoreGive(buttons.lock);
-            
-already_unlocked:
+			xSemaphoreTake(buttons.lock, portMAX_DELAY);
+			if (buttons.buttons[KEYCODE(E)]) {
+				xSemaphoreGive(buttons.lock);
+				xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+				goto already_unlocked;
+			}
+			if (buttons.buttons[KEYCODE(F)]) {
+				xSemaphoreGive(buttons.lock);
+				xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
+				goto already_unlocked;
+			}
+			xSemaphoreGive(buttons.lock);
 
-            tumDrawClear(White);
+			already_unlocked:
 
-            tumDrawFilledBox(caveX - cave_thickness, caveY - cave_thickness,
-                    caveSizeX + cave_thickness * 2,
-                    caveSizeY + cave_thickness * 2,
-                    Red);
-            tumDrawFilledBox(caveX, caveY, caveSizeX, caveSizeY, Aqua);
+			tumDrawClear(White);
 
-            sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(),
-                    xGetMouseY());
+			tumDrawFilledBox(caveX - cave_thickness, caveY - cave_thickness,
+					caveSizeX + cave_thickness * 2,
+					caveSizeY + cave_thickness * 2,
+					Red);
+			tumDrawFilledBox(caveX, caveY, caveSizeX, caveSizeY, Aqua);
 
-            tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
+			sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(),
+					xGetMouseY());
 
-            xSemaphoreTake(buttons.lock, portMAX_DELAY);
-            sprintf(str, "W: %d | S: %d | A: %d | D: %d | Change State [E/F]",
-                    buttons.buttons[KEYCODE(W)], buttons.buttons[KEYCODE(S)], 
-                    buttons.buttons[KEYCODE(A)], buttons.buttons[KEYCODE(D)]); 
-            xSemaphoreGive(buttons.lock);
+			tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
 
-            tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
-            
-            xSemaphoreTake(buttons.lock, portMAX_DELAY);
-            sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
-                    buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)], 
-                    buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
-            xSemaphoreGive(buttons.lock);
+			xSemaphoreTake(buttons.lock, portMAX_DELAY);
+			sprintf(str, "W: %d | S: %d | A: %d | D: %d | Change State [E/F]",
+					buttons.buttons[KEYCODE(W)], buttons.buttons[KEYCODE(S)],
+					buttons.buttons[KEYCODE(A)], buttons.buttons[KEYCODE(D)]);
+			xSemaphoreGive(buttons.lock);
 
-            tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
+			tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
 
-            circlePositionX = caveX + xGetMouseX() / 2;
-            circlePositionY = caveY + xGetMouseY() / 2;
+			xSemaphoreTake(buttons.lock, portMAX_DELAY);
+			sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
+					buttons.buttons[KEYCODE(UP)],
+					buttons.buttons[KEYCODE(DOWN)],
+					buttons.buttons[KEYCODE(LEFT)],
+					buttons.buttons[KEYCODE(RIGHT)]);
+			xSemaphoreGive(buttons.lock);
 
-            tumDrawCircle(circlePositionX, circlePositionY, 20, Green);
+			tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
+
+			circlePositionX = caveX + xGetMouseX() / 2;
+			circlePositionY = caveY + xGetMouseY() / 2;
+
+			tumDrawCircle(circlePositionX, circlePositionY, 20, Green);
 		}
 	}
 }
@@ -228,9 +230,9 @@ void vDemoTask2(void *pvParameters) {
 	const signed short path_radius = 75;
 	const unsigned char rotation_steps = 255;
 	const char str[] = "Hello World";
-    unsigned int text_width, text_height;
+	unsigned int text_width, text_height;
 
-    tumGetTextSize((char *) str, &text_width, &text_height);
+	tumGetTextSize((char *) str, &text_width, &text_height);
 
 	float rotation = 0;
 
@@ -239,20 +241,20 @@ void vDemoTask2(void *pvParameters) {
 
 			xGetButtonInput();
 
-            xSemaphoreTake(buttons.lock, portMAX_DELAY);
-            if (buttons.buttons[KEYCODE(E)]){
-                xSemaphoreGive(buttons.lock);
-                xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
-                goto already_unlocked;
-            }
-            if (buttons.buttons[KEYCODE(F)]){
-                xSemaphoreGive(buttons.lock);
-                xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
-                goto already_unlocked;
-            }
-            xSemaphoreGive(buttons.lock);
-            
-already_unlocked:
+			xSemaphoreTake(buttons.lock, portMAX_DELAY);
+			if (buttons.buttons[KEYCODE(E)]) {
+				xSemaphoreGive(buttons.lock);
+				xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+				goto already_unlocked;
+			}
+			if (buttons.buttons[KEYCODE(F)]) {
+				xSemaphoreGive(buttons.lock);
+				xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
+				goto already_unlocked;
+			}
+			xSemaphoreGive(buttons.lock);
+
+			already_unlocked:
 
 			if (rotation >= 2 * PI)
 				rotation = 0;
@@ -266,17 +268,24 @@ already_unlocked:
 			SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation), 25,
 			Green);
 
-			tumDrawFilledBox(SCREEN_WIDTH / 2 + 2 * path_radius
-					* cos(fmod(rotation + 2 * PI / 3, 2 * PI)),
-					SCREEN_HEIGHT / 2 + 2 * path_radius
-					* sin(fmod(rotation + 2 * PI / 3, 2 * PI)), 
-                    50, 50, Blue);
+			tumDrawFilledBox(
+					SCREEN_WIDTH / 2
+							+ 2 * path_radius
+									* cos(fmod(rotation + 2 * PI / 3, 2 * PI)),
+					SCREEN_HEIGHT / 2
+							+ 2 * path_radius
+									* sin(fmod(rotation + 2 * PI / 3, 2 * PI)),
+					50, 50, Blue);
 
-			tumDrawText((char*)str,
-					SCREEN_WIDTH / 2 + 2 * path_radius 
-                        * cos(fmod(rotation + 4 * PI / 3, 2 * PI)) - text_width,
-					SCREEN_HEIGHT / 2 + 2 * path_radius
-						* sin(fmod(rotation + 4 * PI / 3, 2 * PI)) + text_height,
+			tumDrawText((char*) str,
+					SCREEN_WIDTH / 2
+							+ 2 * path_radius
+									* cos(fmod(rotation + 4 * PI / 3, 2 * PI))
+							- text_width,
+					SCREEN_HEIGHT / 2
+							+ 2 * path_radius
+									* sin(fmod(rotation + 4 * PI / 3, 2 * PI))
+							+ text_height,
 					Red);
 		}
 	}
@@ -284,34 +293,35 @@ already_unlocked:
 
 int main(int argc, char *argv[]) {
 	vInitEvents();
-	vInitDrawing( argv[0] );
+	vInitDrawing(argv[0]);
 
 	xTaskCreate(vDemoTask1, "DemoTask1", mainGENERIC_STACK_SIZE, NULL,
-			mainGENERIC_PRIORITY, &DemoTask1);
+	mainGENERIC_PRIORITY, &DemoTask1);
 	xTaskCreate(vDemoTask2, "DemoTask2", mainGENERIC_STACK_SIZE, NULL,
-			mainGENERIC_PRIORITY, &DemoTask2);
+	mainGENERIC_PRIORITY, &DemoTask2);
 	xTaskCreate(basicSequentialStateMachine, "StateMachine",
-			mainGENERIC_STACK_SIZE, NULL, configMAX_PRIORITIES - 1, NULL);
+	mainGENERIC_STACK_SIZE, NULL, configMAX_PRIORITIES - 1, NULL);
 	xTaskCreate(vSwapBuffers, "BufferSwapTask", mainGENERIC_STACK_SIZE, NULL,
-			configMAX_PRIORITIES, NULL);
+	configMAX_PRIORITIES, NULL);
 
 	vTaskSuspend(DemoTask1);
 	vTaskSuspend(DemoTask2);
 
-    buttons.lock = xSemaphoreCreateMutex();
+	buttons.lock = xSemaphoreCreateMutex(); //Locking mechanism
 
-    if (!buttons.lock) {
-        printf("Button lock mutex not created\n");
-        exit(EXIT_FAILURE);
-    }
+	if (!buttons.lock) {
+		printf("Button lock mutex not created\n");
+		exit(EXIT_FAILURE);
+	}
 
-	DrawReady = xSemaphoreCreateBinary();
+	DrawReady = xSemaphoreCreateBinary(); //Sync signal
 
 	if (!DrawReady) {
 		printf("DrawReady semaphore not created\n");
 		exit(EXIT_FAILURE);
 	}
 
+	//Message sending
 	StateQueue = xQueueCreate(STATE_QUEUE_LENGTH, sizeof(unsigned char));
 
 	if (!StateQueue) {
