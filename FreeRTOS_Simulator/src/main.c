@@ -22,8 +22,8 @@
 #define STATE_ONE   0
 #define STATE_TWO   1
 
-#define NEXT_TASK   1
-#define PREV_TASK   2
+#define NEXT_TASK   0 
+#define PREV_TASK   1
 
 #define STARTING_STATE  STATE_ONE
 
@@ -95,21 +95,13 @@ void basicSequentialStateMachine(void *pvParameters) {
 			goto initial_state;
 
 		// Handle state machine input
-		if (xQueueReceive(StateQueue, &input, portMAX_DELAY) == pdTRUE) {
-			if (input == NEXT_TASK) {
-				changeState(&current_state, 1);
-				if (xTaskGetTickCount() - last_change > state_change_period) {
-					state_changed = 1;
-					last_change = xTaskGetTickCount();
-				}
-			} else if (input == PREV_TASK) {
-				changeState(&current_state, 0);
-				if (xTaskGetTickCount() - last_change > state_change_period) {
-					state_changed = 1;
-					last_change = xTaskGetTickCount();
-				}
-			}
-		}
+		if (xQueueReceive(StateQueue, &input, portMAX_DELAY) == pdTRUE) 
+            if (xTaskGetTickCount() - last_change > state_change_period) {
+                changeState(&current_state, input);
+                state_changed = 1;
+                last_change = xTaskGetTickCount();
+            }
+
 		initial_state:
 		// Handle current state
 		if (state_changed) {
