@@ -43,17 +43,17 @@
 const unsigned char next_state_signal = NEXT_TASK;
 const unsigned char prev_state_signal = PREV_TASK;
 
-TaskHandle_t DemoTask1 = NULL;
-TaskHandle_t DemoTask2 = NULL;
-QueueHandle_t StateQueue = NULL;
-SemaphoreHandle_t DrawReady = NULL;
+static TaskHandle_t DemoTask1 = NULL;
+static TaskHandle_t DemoTask2 = NULL;
+static QueueHandle_t StateQueue = NULL;
+static SemaphoreHandle_t DrawReady = NULL;
 
 typedef struct buttons_buffer {
 	unsigned char buttons[SDL_NUM_SCANCODES];
 	SemaphoreHandle_t lock;
 } buttons_buffer_t;
 
-buttons_buffer_t buttons = { 0 };
+static buttons_buffer_t buttons = { 0 };
 
 /*
  * Changes the state, either forwards of backwards
@@ -137,9 +137,9 @@ void vSwapBuffers(void *pvParameters) {
 	const TickType_t frameratePeriod = 20;
 
 	while (1) {
+		xSemaphoreTake(DisplayReady, portMAX_DELAY);
 		xSemaphoreGive(DrawReady);
 		vDrawUpdateScreen();
-		xSemaphoreTake(DisplayReady, portMAX_DELAY);
 		vTaskDelayUntil(&xLastWakeTime, frameratePeriod);
 	}
 }
@@ -148,7 +148,7 @@ void vSwapBuffers(void *pvParameters) {
 
 void xGetButtonInput(void) {
 	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	xQueueReceive(inputQueue, &buttons, 0);
+	xQueueReceive(inputQueue, &buttons.buttons, 0);
 	xSemaphoreGive(buttons.lock);
 }
 
