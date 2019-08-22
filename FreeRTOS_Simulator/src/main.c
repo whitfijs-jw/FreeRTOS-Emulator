@@ -90,37 +90,36 @@ void basicSequentialStateMachine(void *pvParameters) {
 
 	TickType_t last_change = xTaskGetTickCount();
 
-	while (1) {
-		if (state_changed)
-			goto initial_state;
+    while (1) {
+        if (state_changed)
+            goto initial_state;
 
 		// Handle state machine input
-		if (xQueueReceive(StateQueue, &input, portMAX_DELAY) == pdTRUE) 
+        if (xQueueReceive(StateQueue, &input, portMAX_DELAY) == pdTRUE) 
             if (xTaskGetTickCount() - last_change > state_change_period) {
                 changeState(&current_state, input);
                 state_changed = 1;
                 last_change = xTaskGetTickCount();
             }
 
-		initial_state:
-		// Handle current state
-		if (state_changed) {
-			switch (current_state) {
-			case STATE_ONE:
-				vTaskSuspend(DemoTask2);
-				vTaskResume(DemoTask1);
-				state_changed = 0;
-				break;
-			case STATE_TWO:
-				vTaskSuspend(DemoTask1);
-				vTaskResume(DemoTask2);
-				state_changed = 0;
-				break;
-			default:
-				break;
-			}
-		}
-	}
+        initial_state:
+        // Handle current state
+        if (state_changed) {
+            switch (current_state) {
+            case STATE_ONE:
+                vTaskSuspend(DemoTask2);
+                vTaskResume(DemoTask1);
+                break;
+            case STATE_TWO:
+                vTaskSuspend(DemoTask1);
+                vTaskResume(DemoTask2);
+                break;
+            default:
+                break;
+            }
+            state_changed = 0;
+        }
+    }
 }
 
 void vSwapBuffers(void *pvParameters) {
