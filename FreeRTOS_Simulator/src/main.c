@@ -152,109 +152,145 @@ void xGetButtonInput(void) {
 	xSemaphoreGive(buttons.lock);
 }
 
-void vDemoTask1(void *pvParameters) {
+void vDrawCave(void) {
 	const unsigned char cave_thickness = 25;
+	static const uint16_t caveSizeX = SCREEN_WIDTH / 2;
+	static const uint16_t caveSizeY = SCREEN_HEIGHT / 2;
+	static const uint16_t caveX = SCREEN_WIDTH / 2 - caveSizeX / 2;
+	static const uint16_t caveY = SCREEN_HEIGHT / 2 - caveSizeY / 2;
+	uint16_t circlePositionX = caveX, circlePositionY = caveY;
+
+    tumDrawFilledBox(caveX - cave_thickness, caveY - cave_thickness,
+            caveSizeX + cave_thickness * 2,
+            caveSizeY + cave_thickness * 2,
+            Red);
+    tumDrawFilledBox(caveX, caveY, caveSizeX, caveSizeY, Aqua);
+
+
+    circlePositionX = caveX + xGetMouseX() / 2;
+    circlePositionY = caveY + xGetMouseY() / 2;
+
+    tumDrawCircle(circlePositionX, circlePositionY, 20, Green);
+}
+
+void vDrawHelpText(void) {
+	static char str[100] = { 0 };
+	static unsigned int text_width, text_height;
+
+	tumGetTextSize((char *) str, &text_width, &text_height);
+
+    sprintf(str, "[Q]uit, [C]hang[e] State", xGetMouseX(),
+            xGetMouseY());
+    
+    tumDrawText(str, SCREEN_WIDTH - text_width - 10, DEFAULT_FONT_SIZE * 0.5, Black);
+}
+
+void vDrawButtonText(void) {
+	static char str[100] = { 0 };
+    sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(),
+            xGetMouseY());
+
+    tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
+
+    xSemaphoreTake(buttons.lock, portMAX_DELAY);
+    sprintf(str, "W: %d | S: %d | A: %d | D: %d",
+            buttons.buttons[KEYCODE(W)], buttons.buttons[KEYCODE(S)],
+            buttons.buttons[KEYCODE(A)], buttons.buttons[KEYCODE(D)]);
+    xSemaphoreGive(buttons.lock);
+
+    tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
+
+    xSemaphoreTake(buttons.lock, portMAX_DELAY);
+    sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
+            buttons.buttons[KEYCODE(UP)],
+            buttons.buttons[KEYCODE(DOWN)],
+            buttons.buttons[KEYCODE(LEFT)],
+            buttons.buttons[KEYCODE(RIGHT)]);
+    xSemaphoreGive(buttons.lock);
+    
+    tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
+    
+}
+
+void vCheckStateInput(void) {
+    xGetButtonInput(); //Update global button data
+
+    xSemaphoreTake(buttons.lock, portMAX_DELAY);
+    if (buttons.buttons[KEYCODE(C)]) {
+        xSemaphoreGive(buttons.lock);
+        xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+        return;
+    }
+    if (buttons.buttons[KEYCODE(E)]) {
+        xSemaphoreGive(buttons.lock);
+        xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
+        return;
+    }
+    xSemaphoreGive(buttons.lock);
+}
+
+void vDemoTask1(void *pvParameters) {
 	signed char ret = 0;
 
 	/* building the cave:
 	 caveX and caveY define the top left corner of the cave
 	 */
-	const uint16_t caveSizeX = SCREEN_WIDTH / 2;
-	const uint16_t caveSizeY = SCREEN_HEIGHT / 2;
-	const uint16_t caveX = SCREEN_WIDTH / 2 - caveSizeX / 2;
-	const uint16_t caveY = SCREEN_HEIGHT / 2 - caveSizeY / 2;
-	uint16_t circlePositionX = caveX, circlePositionY = caveY;
 
-	char str[100] = { 0 };
 
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
-
-			xGetButtonInput();
-
-			xSemaphoreTake(buttons.lock, portMAX_DELAY);
-			if (buttons.buttons[KEYCODE(C)]) {
-				xSemaphoreGive(buttons.lock);
-				xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
-				goto already_unlocked;
-			}
-			if (buttons.buttons[KEYCODE(S)]) {
-				xSemaphoreGive(buttons.lock);
-				xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
-				goto already_unlocked;
-			}
-			xSemaphoreGive(buttons.lock);
-
-			already_unlocked:
-
+            vCheckStateInput();
 			tumDrawClear(White);
-
-			tumDrawFilledBox(caveX - cave_thickness, caveY - cave_thickness,
-					caveSizeX + cave_thickness * 2,
-					caveSizeY + cave_thickness * 2,
-					Red);
-			tumDrawFilledBox(caveX, caveY, caveSizeX, caveSizeY, Aqua);
-
-			sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(),
-					xGetMouseY());
-
-			tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
-
-			xSemaphoreTake(buttons.lock, portMAX_DELAY);
-			sprintf(str, "W: %d | S: %d | A: %d | D: %d | [C]hange [S]tate",
-					buttons.buttons[KEYCODE(W)], buttons.buttons[KEYCODE(S)],
-					buttons.buttons[KEYCODE(A)], buttons.buttons[KEYCODE(D)]);
-			xSemaphoreGive(buttons.lock);
-
-			tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
-
-			xSemaphoreTake(buttons.lock, portMAX_DELAY);
-			sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d | [Q]uit",
-					buttons.buttons[KEYCODE(UP)],
-					buttons.buttons[KEYCODE(DOWN)],
-					buttons.buttons[KEYCODE(LEFT)],
-					buttons.buttons[KEYCODE(RIGHT)]);
-			xSemaphoreGive(buttons.lock);
-
-			tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
-
-			circlePositionX = caveX + xGetMouseX() / 2;
-			circlePositionY = caveY + xGetMouseY() / 2;
-
-			tumDrawCircle(circlePositionX, circlePositionY, 20, Green);
+            vDrawCave();
+            vDrawButtonText();
+            vDrawHelpText();
 		}
 	}
 }
 
-void vDemoTask2(void *pvParameters) {
-	const signed short path_radius = 75;
-	const unsigned char rotation_steps = 255;
-	const char str[] = "Hello World";
-	unsigned int text_width, text_height;
+void vDrawRotatingObjects(float rotation) {
+	static const char str[] = "Hello World";
+	static const signed short path_radius = 75;
+	static unsigned int text_width;
 
-	tumGetTextSize((char *) str, &text_width, &text_height);
+	tumGetTextSize((char *) str, &text_width, NULL);
+
+    tumDrawCircle(
+        SCREEN_WIDTH / 2 + 2 * path_radius * cos(rotation),
+        SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation), 25,
+        Green);
+
+    tumDrawFilledBox(
+            SCREEN_WIDTH / 2
+                    + 2 * path_radius
+                            * cos(fmod(rotation + 2 * PI / 3, 2 * PI)),
+            SCREEN_HEIGHT / 2
+                    + 2 * path_radius
+                            * sin(fmod(rotation + 2 * PI / 3, 2 * PI)),
+            50, 50, Blue);
+
+    tumDrawText((char*) str,
+            SCREEN_WIDTH / 2
+                    + 2 * path_radius
+                            * cos(fmod(rotation + 4 * PI / 3, 2 * PI))
+                    - text_width,
+            SCREEN_HEIGHT / 2
+                    + 2 * path_radius
+                            * sin(fmod(rotation + 4 * PI / 3, 2 * PI))
+                    + text_height,
+            Red);
+
+}
+
+void vDemoTask2(void *pvParameters) {
+	const unsigned char rotation_steps = 255;
 
 	float rotation = 0;
 
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
 
-			xGetButtonInput();
-
-			xSemaphoreTake(buttons.lock, portMAX_DELAY);
-			if (buttons.buttons[KEYCODE(C)]) {
-				xSemaphoreGive(buttons.lock);
-				xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
-				goto already_unlocked;
-			}
-			if (buttons.buttons[KEYCODE(S)]) {
-				xSemaphoreGive(buttons.lock);
-				xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
-				goto already_unlocked;
-			}
-			xSemaphoreGive(buttons.lock);
-
-			already_unlocked:
+            vCheckStateInput();
 
 			if (rotation >= 2 * PI)
 				rotation = 0;
@@ -262,31 +298,8 @@ void vDemoTask2(void *pvParameters) {
 				rotation += 2 * PI / rotation_steps;
 
 			tumDrawClear(White);
-
-			tumDrawCircle(
-			SCREEN_WIDTH / 2 + 2 * path_radius * cos(rotation),
-			SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation), 25,
-			Green);
-
-			tumDrawFilledBox(
-					SCREEN_WIDTH / 2
-							+ 2 * path_radius
-									* cos(fmod(rotation + 2 * PI / 3, 2 * PI)),
-					SCREEN_HEIGHT / 2
-							+ 2 * path_radius
-									* sin(fmod(rotation + 2 * PI / 3, 2 * PI)),
-					50, 50, Blue);
-
-			tumDrawText((char*) str,
-					SCREEN_WIDTH / 2
-							+ 2 * path_radius
-									* cos(fmod(rotation + 4 * PI / 3, 2 * PI))
-							- text_width,
-					SCREEN_HEIGHT / 2
-							+ 2 * path_radius
-									* sin(fmod(rotation + 4 * PI / 3, 2 * PI))
-							+ text_height,
-					Red);
+            vDrawHelpText();
+            vDrawRotatingObjects(rotation);
 		}
 	}
 }
