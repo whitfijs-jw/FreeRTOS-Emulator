@@ -174,9 +174,9 @@ void vDrawCave(void) {
 
 void vDrawHelpText(void) {
 	static char str[100] = { 0 };
-	static unsigned int text_width, text_height;
+	static unsigned int text_width;
 
-	tumGetTextSize((char *) str, &text_width, &text_height);
+	tumGetTextSize((char *) str, &text_width, NULL);
 
 	sprintf(str, "[Q]uit, [C]hang[e] State", xGetMouseX(), xGetMouseY());
 
@@ -246,9 +246,9 @@ void vDemoTask1(void *pvParameters) {
 void vDrawRotatingObjects(float rotation) {
 	static const char str[] = "Hello World";
 	static const signed short path_radius = 75;
-	static unsigned int text_width;
+	static unsigned int text_width, text_height;
 
-	tumGetTextSize((char *) str, &text_width, NULL);
+	tumGetTextSize((char *) str, &text_width, &text_height);
 
 	tumDrawCircle( SCREEN_WIDTH / 2 + 2 * path_radius * cos(rotation),
 	    SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation), 25,

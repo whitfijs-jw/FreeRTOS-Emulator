@@ -503,7 +503,13 @@ signed char tumDrawText(char *str, signed short x, signed short y,
 	CREATE_JOB(text);
 
 	job.data->text.str = malloc(sizeof(char) * (strlen(str) + 1));
-	//TODO checking
+
+    if(!job.data->text.str){
+        printf("Error allocating buffer in tumDrawText\n");
+        exit(EXIT_FAILURE);
+    }
+
+
 	strcpy(job.data->text.str, str);
 	job.data->text.x = x;
 	job.data->text.y = y;
