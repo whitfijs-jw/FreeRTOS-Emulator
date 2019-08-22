@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <SDL2/SDL_scancode.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -25,6 +27,8 @@
 
 #define STARTING_STATE  STATE_ONE
 
+#define STATE_DEBOUNCE_DELAY   75 
+
 #define Red     0xFF0000
 #define Green   0x00FF00
 #define Blue    0x0000FF
@@ -43,6 +47,13 @@ TaskHandle_t DemoTask1 = NULL;
 TaskHandle_t DemoTask2 = NULL;
 QueueHandle_t StateQueue = NULL;
 SemaphoreHandle_t DrawReady = NULL;
+
+typedef struct buttons_buffer{
+	unsigned char buttons[SDL_NUM_SCANCODES];
+    SemaphoreHandle_t lock;
+} buttons_buffer_t;
+
+buttons_buffer_t buttons = {0};
 
 /*
  * Changes the state, either forwards of backwards
@@ -75,7 +86,7 @@ void basicSequentialStateMachine(void *pvParameters) {
 	unsigned char state_changed = 1; // Only re-evaluate state if it has changed
 	unsigned char input = 0;
 
-	const int state_change_period = 75;
+	const int state_change_period = STATE_DEBOUNCE_DELAY;
 
 	TickType_t last_change = xTaskGetTickCount();
 
@@ -133,12 +144,15 @@ void vSwapBuffers(void *pvParameters) {
 	}
 }
 
-void xGetButtonInput(buttons_t *but) {
-	xQueuePeek(inputQueue, but, 0);
+#define KEYCODE(CHAR)       SDL_SCANCODE_##CHAR
+
+void xGetButtonInput(void) {
+    xSemaphoreTake(buttons.lock, portMAX_DELAY);
+	xQueueReceive(inputQueue, &buttons, 0);
+    xSemaphoreGive(buttons.lock);
 }
 
 void vDemoTask1(void *pvParameters) {
-	buttons_t buttons = {0};
 	const unsigned char cave_thickness = 25;
 	signed char ret = 0;
 
@@ -156,12 +170,22 @@ void vDemoTask1(void *pvParameters) {
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
 
-            xGetButtonInput(&buttons);
+            xGetButtonInput();
 
-            if (buttons.e)
-                xQueueSend(StateQueue, &next_state_signal, 100);
-            if (buttons.f)
-                xQueueSend(StateQueue, &prev_state_signal, 100);
+            xSemaphoreTake(buttons.lock, portMAX_DELAY);
+            if (buttons.buttons[KEYCODE(E)]){
+                xSemaphoreGive(buttons.lock);
+                xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+                goto already_unlocked;
+            }
+            if (buttons.buttons[KEYCODE(F)]){
+                xSemaphoreGive(buttons.lock);
+                xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
+                goto already_unlocked;
+            }
+            xSemaphoreGive(buttons.lock);
+            
+already_unlocked:
 
             tumDrawClear(White);
 
@@ -176,11 +200,21 @@ void vDemoTask1(void *pvParameters) {
 
             tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
 
-            sprintf(str, "A: %d | B: %d | C %d | D: %d | E: %d | F: %d",
-                    buttons.a, buttons.b, buttons.c, buttons.d, buttons.e,
-                    buttons.f);
+            xSemaphoreTake(buttons.lock, portMAX_DELAY);
+            sprintf(str, "W: %d | S: %d | A: %d | D: %d | Change State [E/F]",
+                    buttons.buttons[KEYCODE(W)], buttons.buttons[KEYCODE(S)], 
+                    buttons.buttons[KEYCODE(A)], buttons.buttons[KEYCODE(D)]); 
+            xSemaphoreGive(buttons.lock);
 
             tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
+            
+            xSemaphoreTake(buttons.lock, portMAX_DELAY);
+            sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
+                    buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)], 
+                    buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
+            xSemaphoreGive(buttons.lock);
+
+            tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
 
             circlePositionX = caveX + xGetMouseX() / 2;
             circlePositionY = caveY + xGetMouseY() / 2;
@@ -191,7 +225,6 @@ void vDemoTask1(void *pvParameters) {
 }
 
 void vDemoTask2(void *pvParameters) {
-	buttons_t buttons;
 	const signed short path_radius = 75;
 	const unsigned char rotation_steps = 255;
 	const char str[] = "Hello World";
@@ -204,12 +237,22 @@ void vDemoTask2(void *pvParameters) {
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
 
-			xGetButtonInput(&buttons);
+			xGetButtonInput();
 
-			if (buttons.e)
-				xQueueSend(StateQueue, &next_state_signal, 100);
-			if (buttons.f)
-				xQueueSend(StateQueue, &prev_state_signal, 100);
+            xSemaphoreTake(buttons.lock, portMAX_DELAY);
+            if (buttons.buttons[KEYCODE(E)]){
+                xSemaphoreGive(buttons.lock);
+                xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+                goto already_unlocked;
+            }
+            if (buttons.buttons[KEYCODE(F)]){
+                xSemaphoreGive(buttons.lock);
+                xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
+                goto already_unlocked;
+            }
+            xSemaphoreGive(buttons.lock);
+            
+already_unlocked:
 
 			if (rotation >= 2 * PI)
 				rotation = 0;
@@ -255,23 +298,30 @@ int main(int argc, char *argv[]) {
 	vTaskSuspend(DemoTask1);
 	vTaskSuspend(DemoTask2);
 
+    buttons.lock = xSemaphoreCreateMutex();
+
+    if (!buttons.lock) {
+        printf("Button lock mutex not created\n");
+        exit(EXIT_FAILURE);
+    }
+
 	DrawReady = xSemaphoreCreateBinary();
 
 	if (!DrawReady) {
 		printf("DrawReady semaphore not created\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	StateQueue = xQueueCreate(STATE_QUEUE_LENGTH, sizeof(unsigned char));
 
 	if (!StateQueue) {
 		printf("StateQueue queue not created\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	vTaskStartScheduler();
 
-	return 1;
+	return EXIT_SUCCESS;
 }
 
 void vMainQueueSendPassed(void) {
