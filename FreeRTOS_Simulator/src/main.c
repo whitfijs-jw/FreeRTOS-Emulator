@@ -171,7 +171,7 @@ void vDrawHelpText(void) {
 
 	tumGetTextSize((char *) str, &text_width, NULL);
 
-	sprintf(str, "[Q]uit, [C]hang[e] State", xGetMouseX(), xGetMouseY());
+	sprintf(str, "[Q]uit, [C]hang[e] State");
 
 	tumDrawText(str, SCREEN_WIDTH - text_width - 10, DEFAULT_FONT_SIZE * 0.5,
 			Black);
