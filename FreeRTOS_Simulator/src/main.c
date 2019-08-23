@@ -143,22 +143,22 @@ void xGetButtonInput(void) {
 	xSemaphoreGive(buttons.lock);
 }
 
+#define CAVE_SIZE_X 	SCREEN_WIDTH / 2
+#define CAVE_SIZE_Y 	SCREEN_HEIGHT / 2
+#define CAVE_X 		CAVE_SIZE_X / 2
+#define CAVE_Y 		CAVE_SIZE_Y / 2
+#define CAVE_THICKNESS 	25
+
 void vDrawCave(void) {
-	const unsigned char cave_thickness = 25;
-	static const uint16_t caveSizeX = SCREEN_WIDTH / 2;
-	static const uint16_t caveSizeY = SCREEN_HEIGHT / 2;
-	static const uint16_t caveX = SCREEN_WIDTH / 2 - caveSizeX / 2;
-	static const uint16_t caveY = SCREEN_HEIGHT / 2 - caveSizeY / 2;
-	uint16_t circlePositionX = caveX, circlePositionY = caveY;
+	static unsigned short circlePositionX, circlePositionY;
 
-	tumDrawFilledBox(caveX - cave_thickness, caveY - cave_thickness,
-			caveSizeX + cave_thickness * 2, caveSizeY + cave_thickness * 2,
-			Red);
+	tumDrawFilledBox(CAVE_X - CAVE_THICKNESS, CAVE_Y - CAVE_THICKNESS,
+		CAVE_SIZE_X + CAVE_THICKNESS * 2, CAVE_SIZE_Y + CAVE_THICKNESS * 2, Red);
 	
-    tumDrawFilledBox(caveX, caveY, caveSizeX, caveSizeY, Aqua);
+	tumDrawFilledBox(CAVE_X, CAVE_Y, CAVE_SIZE_X, CAVE_SIZE_Y, Aqua);
 
-	circlePositionX = caveX + xGetMouseX() / 2;
-	circlePositionY = caveY + xGetMouseY() / 2;
+	circlePositionX = CAVE_X + xGetMouseX() / 2;
+	circlePositionY = CAVE_Y + xGetMouseY() / 2;
 
 	tumDrawCircle(circlePositionX, circlePositionY, 20, Green);
 }
@@ -177,26 +177,26 @@ void vDrawHelpText(void) {
 
 void vDrawButtonText(void) {
 	static char str[100] = { 0 };
-	sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(), xGetMouseY());
+	
+    sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(), xGetMouseY());
 
 	tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
 
-	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	sprintf(str, "W: %d | S: %d | A: %d | D: %d", buttons.buttons[KEYCODE(W)],
-			buttons.buttons[KEYCODE(S)], buttons.buttons[KEYCODE(A)],
-			buttons.buttons[KEYCODE(D)]);
-	xSemaphoreGive(buttons.lock);
+	if (xSemaphoreTake(buttons.lock, portMAX_DELAY) == pdTRUE){
+        sprintf(str, "W: %d | S: %d | A: %d | D: %d", buttons.buttons[KEYCODE(W)],
+                buttons.buttons[KEYCODE(S)], buttons.buttons[KEYCODE(A)],
+                buttons.buttons[KEYCODE(D)]);
+        xSemaphoreGive(buttons.lock);
+        tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
+    }
 
-	tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
-
-	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
-			buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)],
-			buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
-	xSemaphoreGive(buttons.lock);
-
-	tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
-
+	if (xSemaphoreTake(buttons.lock, portMAX_DELAY) == pdTRUE) {
+        sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
+                buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)],
+                buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
+        xSemaphoreGive(buttons.lock);
+	    tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
+    }
 }
 
 void vCheckStateInput(void) {
@@ -234,49 +234,26 @@ void vDemoTask1(void *pvParameters) {
 	}
 }
 
-void vDrawRotatingObjects(float rotation) {
-	static const char str[] = "Hello World";
-	static const signed short path_radius = 75;
+void vDrawStateText() {
+	static const char str[] = "Second state";
 	static unsigned int text_width, text_height;
 
 	tumGetTextSize((char *) str, &text_width, &text_height);
 
-	tumDrawCircle( SCREEN_WIDTH / 2 + 2 * path_radius * cos(rotation),
-	    SCREEN_HEIGHT / 2 + 2 * path_radius * sin(rotation), 25,
-	    Green);
-
-	tumDrawFilledBox(SCREEN_WIDTH / 2 + 2 * path_radius
-		    * cos(fmod(rotation + 2 * PI / 3, 2 * PI)),
-		SCREEN_HEIGHT / 2 + 2 * path_radius
-		    * sin(fmod(rotation + 2 * PI / 3, 2 * PI)), 50, 50,
-		Blue);
-
-	tumDrawText((char*) str, SCREEN_WIDTH / 2 + 2 * path_radius 
-            * cos(fmod(rotation + 4 * PI / 3, 2 * PI)) - text_width,
-		SCREEN_HEIGHT / 2 + 2 * path_radius 
-            * sin(fmod(rotation + 4 * PI / 3, 2 * PI)) + text_height,
-		Red);
+	tumDrawText((char*) str, SCREEN_WIDTH / 2 - text_width / 2,
+            SCREEN_HEIGHT / 2 - text_height / 2, Red);
 
 }
 
 void vDemoTask2(void *pvParameters) {
-	const unsigned char rotation_steps = 255;
-
-	float rotation = 0;
-
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
 
 			vCheckStateInput();
 
-			if (rotation >= 2 * PI)
-				rotation = 0;
-			else
-				rotation += 2 * PI / rotation_steps;
-
 			tumDrawClear(White);
 			vDrawHelpText();
-			vDrawRotatingObjects(rotation);
+			vDrawStateText();
 		}
 	}
 }
