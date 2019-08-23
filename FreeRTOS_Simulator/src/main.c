@@ -177,26 +177,26 @@ void vDrawHelpText(void) {
 
 void vDrawButtonText(void) {
 	static char str[100] = { 0 };
-	sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(), xGetMouseY());
+	
+    sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(), xGetMouseY());
 
 	tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black);
 
-	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	sprintf(str, "W: %d | S: %d | A: %d | D: %d", buttons.buttons[KEYCODE(W)],
-			buttons.buttons[KEYCODE(S)], buttons.buttons[KEYCODE(A)],
-			buttons.buttons[KEYCODE(D)]);
-	xSemaphoreGive(buttons.lock);
+	if (xSemaphoreTake(buttons.lock, portMAX_DELAY) == pdTRUE){
+        sprintf(str, "W: %d | S: %d | A: %d | D: %d", buttons.buttons[KEYCODE(W)],
+                buttons.buttons[KEYCODE(S)], buttons.buttons[KEYCODE(A)],
+                buttons.buttons[KEYCODE(D)]);
+        xSemaphoreGive(buttons.lock);
+        tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
+    }
 
-	tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black);
-
-	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
-			buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)],
-			buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
-	xSemaphoreGive(buttons.lock);
-
-	tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
-
+	if (xSemaphoreTake(buttons.lock, portMAX_DELAY) == pdTRUE) {
+        sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
+                buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)],
+                buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
+        xSemaphoreGive(buttons.lock);
+	    tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black);
+    }
 }
 
 void vCheckStateInput(void) {
