@@ -242,10 +242,6 @@ void vCheckStateInput(void) {
 		xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
 		return;
 	}
-    if (buttons.buttons[KEYCODE(I)]) {
-        xSemaphoreGive(buttons.lock);
-        vPlayHit();
-    }
 	xSemaphoreGive(buttons.lock);
 }
 
@@ -288,6 +284,10 @@ void vDemoTask2(void *pvParameters) {
 	}
 }
 
+void playBallSound(void) {
+    vPlaySample(a3);
+}
+
 void vDemoTask3(void *pvParameters) {
 	TickType_t xLastWakeTime, prevWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
@@ -295,7 +295,7 @@ void vDemoTask3(void *pvParameters) {
 	const TickType_t updatePeriod = 10;
 
     ball_t *my_ball = createBall(SCREEN_WIDTH / 2, SCREEN_HEIGHT/2, Black, 20,
-            &vPlayHit);
+            &playBallSound);
     setBallSpeed(my_ball, 250, 250); 
 
     //Left wall
