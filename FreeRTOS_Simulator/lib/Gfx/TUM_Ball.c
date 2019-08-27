@@ -49,7 +49,8 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
 }
 
 ball_t *createBall(unsigned short initial_x, unsigned short initial_y,
-        unsigned int colour, unsigned short radius, void (*callback)()){
+        unsigned int colour, unsigned short radius, float max_speed, 
+        void (*callback)()){
 
     ball_t *ret = calloc(1, sizeof(ball_t));
 
@@ -62,6 +63,7 @@ ball_t *createBall(unsigned short initial_x, unsigned short initial_y,
     ret->y = initial_y;
     ret->f_x = initial_x;
     ret->f_y = initial_y;
+    ret->max_speed = max_speed;
     ret->colour = colour;
     ret->radius = radius;
     ret->callback = callback;
@@ -89,12 +91,14 @@ void changeBallDirection(ball_t *ball, unsigned char direction,
         float dampening) {
     if(direction & 1){
         ball->dx *= -1;
-        ball->dx -= ball->dx * dampening;
+        if (abs(ball->dx * (1 + dampening)) <= ball->max_speed)
+            ball->dx += ball->dx * dampening;
     }
     
     if((direction >> 1) & 1){
         ball->dy *= -1;
-        ball->dy -= ball->dy * dampening;
+        if (abs(ball->dy * (1 + dampening)) <= ball->max_speed)
+            ball->dy += ball->dy * dampening;
     }
 }
 
