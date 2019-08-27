@@ -122,8 +122,6 @@ typedef struct draw_job {
 
 const int screen_height = SCREEN_HEIGHT;
 const int screen_width = SCREEN_WIDTH;
-const int screen_x = SCREEN_X;
-const int screen_y = SCREEN_Y;
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;

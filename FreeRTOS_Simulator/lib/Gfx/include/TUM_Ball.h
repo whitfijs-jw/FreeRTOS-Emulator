@@ -190,6 +190,17 @@ void setBallSpeed(ball_t *ball, float dx, float dy, float max_speed,
         unsigned char flags);
 
 /**
+ * @brief Sets the location of the ball
+ *
+ *
+ * @param ball Reference to the ball objects whos parameters are to be modified
+ * @param dx New X axis location that is to be set
+ * @param dy New Y axis location that is to be set
+ * @return NULL Always returns NULL
+ */
+void setBallLocation(ball_t *ball, unsigned short x, unsigned short y);
+
+/**
  * @brief Checks if a ball is currently collided with other objects
  *
  *

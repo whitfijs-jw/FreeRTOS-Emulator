@@ -20,14 +20,21 @@
 #define FONTS_LOCATION       "/../resources/fonts/"
 #define FONT_LOCATION       FONTS_LOCATION DEFAULT_FONT
 
-#define SCREEN_X 100
-#define SCREEN_Y 200
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
 #define ASPECT_RATIO SCREEN_WIDTH/SCREEN_HEIGHT
 
 #define mainGENERIC_PRIORITY	( tskIDLE_PRIORITY )
 #define mainGENERIC_STACK_SIZE  ( ( unsigned short ) 2560 )
+
+#define Red     0xFF0000
+#define Green   0x00FF00
+#define Blue    0x0000FF
+#define Yellow  0xFFFF00
+#define Aqua    0x00FFFF
+#define Fuchsia 0xFF00FF
+#define White   0xFFFFFF
+#define Black   0x000000
 
 extern SemaphoreHandle_t DisplayReady;
 
