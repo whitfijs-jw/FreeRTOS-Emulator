@@ -187,12 +187,17 @@ signed char tumDrawEllipse(signed short x, signed short y, signed short rx,
 
 /**
  * @ingroup tum_draw
- * @brief
+ * @brief Draws an arc on the screen
+ *
+ * Draws an arc on the screen, the arc is determined from the starting and 
+ * ending angles. 
  *
  * @param x X coordinate of the center of the arc 
  * @param y Y coordinate of the cente of the arc
  * @param radius Radius of the arc in pixels 
- * @param colour RGB colour of the ellipse
+ * @param start Starting radius of the arc, 0 degrees is down
+ * @param end Ending radius of the arc, 0 degrees is down
+ * @param colour RGB colour of the arc
  * @return signed char 0 on success
  */
 signed char tumDrawArc(signed short x, signed short y, signed short radius,
@@ -200,10 +205,15 @@ signed char tumDrawArc(signed short x, signed short y, signed short radius,
 
 /**
  * @ingroup tum_draw
- * @brief
+ * @brief Prints a string to the screen
  *
- * @param
- * @param colour RGB colour of the ellipse
+ * The given string is printed in the given colour at the location x,y. The
+ * location is referenced from the top left corner of the strings bounding box.
+ *
+ * @param str String to print
+ * @param x X coordinate of the top left point of the text's bounding box 
+ * @param y Y coordinate of the top left point of the text's bounding box 
+ * @param colour RGB colour of the text
  * @return signed char 0 on success
  */
 signed char tumDrawText(char *str, signed short x, signed short y,
@@ -211,20 +221,24 @@ signed char tumDrawText(char *str, signed short x, signed short y,
 
 /**
  * @ingroup tum_draw
- * @brief
+ * @brief Finds the width and height of a strings bounding box
  *
- * @param
- * @param colour RGB colour of the ellipse
+ * @param String who's bounding box size is required
+ * @param width Variable where the width shall be stored
+ * @param height Variable where the height shall be stored
  * @return signed char 0 on success
  */
 void tumGetTextSize(char *str, unsigned int *width, unsigned int *height);
 
 /**
  * @ingroup tum_draw
- * @brief
+ * @brief Draws a filled box on the screen
  *
- * @param
- * @param colour RGB colour of the ellipse
+ * @param x X coordinate of the top left point of the box 
+ * @param y Y coordinate of the top left point of the box 
+ * @param w Width of the box
+ * @param h Height of the box
+ * @param colour RGB colour of the box
  * @return signed char 0 on success
  */
 signed char tumDrawBox(signed short x, signed short y, signed short w,
@@ -232,10 +246,13 @@ signed char tumDrawBox(signed short x, signed short y, signed short w,
 
 /**
  * @ingroup tum_draw
- * @brief
+ * @brief Draws an unfilled box on the screen
  *
- * @param
- * @param colour RGB colour of the ellipse
+ * @param x X coordinate of the top left point of the box 
+ * @param y Y coordinate of the top left point of the box 
+ * @param w Width of the box
+ * @param h Height of the box
+ * @param colour RGB colour of the filled box
  * @return signed char 0 on success
  */
 signed char tumDrawFilledBox(signed short x, signed short y, signed short w,

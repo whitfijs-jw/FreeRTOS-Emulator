@@ -196,13 +196,13 @@ static void vClearDisplay(unsigned int colour) {
 static void vDrawRectangle(signed short x, signed short y, signed short w,
 		signed short h, unsigned int colour) {
 
-	rectangleColor(renderer, x, y, x + w, y + h,
+	rectangleColor(renderer, x + w, y, x, y + h,
 			SwapBytes((colour << 8) | 0xFF));
 }
 
 static void vDrawFilledRectangle(signed short x, signed short y, signed short w,
 		signed short h, unsigned int colour) {
-	boxColor(renderer, x, y, x + w, y + h, SwapBytes((colour << 8) | 0xFF));
+	boxColor(renderer, x + w, y, x, y + h, SwapBytes((colour << 8) | 0xFF));
 }
 
 static void vDrawArc(signed short x, signed short y, signed short radius,
