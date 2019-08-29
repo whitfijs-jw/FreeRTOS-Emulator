@@ -30,8 +30,8 @@
  * start to move.
  */
 typedef struct ball{
-    unsigned short x;       /**< X pixel co-ord of ball on screen */
-    unsigned short y;       /**< Y pixel co-ord of ball on screen */
+    unsigned short x;       /**< X pixel coord of ball on screen */
+    unsigned short y;       /**< Y pixel coord of ball on screen */
 
     float f_x;              /**< Absolute X location of ball */
     float f_y;              /**< Absolute Y location of ball */
@@ -193,9 +193,9 @@ void setBallSpeed(ball_t *ball, float dx, float dy, float max_speed,
  * @brief Sets the location of the ball
  *
  *
- * @param ball Reference to the ball objects whos parameters are to be modified
- * @param dx New X axis location that is to be set
- * @param dy New Y axis location that is to be set
+ * @param ball Reference to the ball objects whose parameters are to be modified
+ * @param x New X axis location that is to be set
+ * @param y New Y axis location that is to be set
  * @return NULL Always returns NULL
  */
 void setBallLocation(ball_t *ball, unsigned short x, unsigned short y);
@@ -223,7 +223,7 @@ void checkBallCollisions(ball_t *ball, void (*callback)());
  * The formula used is as follows: 
  * New position += speed * milliseconds passed / milliseconds in a second
  *
- * @param ball Reference to the ball object whos position is to be updated
+ * @param ball Reference to the ball object whose position is to be updated
  * @param milli_seconds Milliseconds passed since balls position was last updated
  * @return
  */
