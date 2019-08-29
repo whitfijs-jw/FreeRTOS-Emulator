@@ -110,7 +110,7 @@ extern SemaphoreHandle_t DisplayReady;
 
 /**
  * @typedef coord_t
- * @brief Typedef for @ref struct coord_t
+ * @brief Typedef for @ref struct coord
  */
 
 /**
