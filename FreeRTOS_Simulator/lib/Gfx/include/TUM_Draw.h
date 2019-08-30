@@ -110,7 +110,7 @@ extern SemaphoreHandle_t DisplayReady;
 
 /**
  * @typedef coord_t
- * @brief Typedef for @ref struct coord
+ * @brief Typedef for @ref coord
  */
 
 /**
@@ -223,7 +223,7 @@ signed char tumDrawText(char *str, signed short x, signed short y,
  * @ingroup tum_draw
  * @brief Finds the width and height of a strings bounding box
  *
- * @param String who's bounding box size is required
+ * @param str String who's bounding box size is required
  * @param width Integer where the width shall be stored
  * @param height Integer where the height shall be stored
  * @return signed char 0 on success
@@ -278,7 +278,7 @@ signed char tumDrawCircle(signed short x, signed short y, signed short radius,
  * @param x1 X coordinate of the starting point of the line
  * @param y1 Y coordinate of the starting point of the line
  * @param x2 X coordinate of the starting point of the line
- * @param Y2 x coordinate of the starting point of the line
+ * @param y2 x coordinate of the starting point of the line
  * @param thickness The thickness of the line in pixels
  * @param colour RGB colour of the ellipse
  * @return signed char 0 on success
@@ -290,7 +290,7 @@ signed char tumDrawLine(signed short x1, signed short y1, signed short x2,
  * @ingroup tum_draw
  * @brief Draws a polygon on the screen
  *
- * Drawing a polygon requires an array of points, each given by a @ref coord_t.
+ * Drawing a polygon requires an array of points, each given by a @ref coord.
  * The number of points passed through in the coord array must also be passed
  * to the function.
  *
@@ -315,7 +315,7 @@ signed char tumDrawTriangle(coord_t *points, unsigned int colour);
  * @ingroup tum_draw
  * @brief Draws an image on the screen
  *
- * @param Filename of the image to be drawn 
+ * @param filename Filename of the image to be drawn 
  * @param x X coordinate of the top left corner of the image 
  * @param y Y coordinate of the top left corner of the image
  * @return signed char 0 on success
@@ -337,7 +337,7 @@ void tumGetImageSize(char *filename, int *w, int *h);
  * @ingroup tum_draw
  * @brief Draws a scaled image on the screen
  *
- * @param Filename of the image to be drawn 
+ * @param filename Filename of the image to be drawn 
  * @param x X coordinate of the top left corner of the image 
  * @param y Y coordinate of the top left corner of the image
  * @param scale The scale factor of the image
@@ -348,9 +348,14 @@ signed char tumDrawScaledImage(char *filename, signed short x, signed short y,
 
 /**
  * @ingroup tum_draw
- * @brief
+ * @brief Draws an arrow on the screen
  *
- * @param
+ * @param x1 X coordinate of the tail of the arrow
+ * @param y1 Y coordinate of the tail of the arrow
+ * @param x2 X coordinate of the head of the arrow
+ * @param y2 Y coordinate of the head of the arrow
+ * @param head_length Length in pixels of the arrow's head
+ * @param thickness Thickness in pixels of the arrow's lines
  * @param colour RGB colour of the ellipse
  * @return signed char 0 on success
  */
