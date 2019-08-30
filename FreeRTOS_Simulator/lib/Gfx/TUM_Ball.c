@@ -75,10 +75,10 @@ ball_t *createBall(unsigned short initial_x, unsigned short initial_y,
 void setBallSpeed(ball_t *ball, float dx, float dy, float max_speed, 
         unsigned char flags) {
     if(flags & 1) //Set X
-        if(dx <= ball->max_speed)
+        if(abs(dx) <= ball->max_speed)
             ball->dx = dx;
     if((flags >> 1) & 1) //Set y
-        if(dy <= ball->max_speed)
+        if(abs(dy) <= ball->max_speed)
             ball->dy = dy;
     if((flags >> 2) & 1) //Set max speed
         ball->max_speed = max_speed;
