@@ -26,6 +26,15 @@
 #define __TUM_BALL_H__
 
 /**
+ * @defgroup tum_ball TUM Ball API
+ *
+ * Functions to generate ball and wall object that interact each other in a 
+ * 2D environment
+ *
+ * @{
+ */
+
+/**
  * @brief Object to represent a ball that bounces off walls
  *
  * A ball is created with a starting X and Y location (center of the ball),
@@ -110,6 +119,12 @@ typedef struct wall{
 /**
  * @brief Creates a ball object
  *
+ * Example use:
+ * @code
+ * ball_t *my_ball = createBall(SCREEN_WIDTH / 2, SCREEN_HEIGHT/2, Black, 20,
+ *      1000, &playBallSound);
+ * @endcode
+ *
  * @param initial_x Initial X coordinate of the ball (in pixels)
  * @param initial_y Initial Y coordinate of the ball (in pixels)
  * @param colour The hex RGB colour of the ball
@@ -141,17 +156,16 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
         void (*callback)());
 
 /**
+ * @ingroup tum_ball
  * @defgroup set_ball_speed_flags Ball speed set flags
  *
- * The current speed and maximum speed of a ball is set by passing the new values
- * as well as a flag that signals which values should be updated
+ * Flags passed to @ref setBallSpeed to set various speed properties of a ball
  *
  * @{
  */
 
 /**
  * @def SET_BALL_SPEED_X
- * @ingroup set_ball_speed_flags
  *
  * Sets the X axis speed of the ball (dx)
  */
@@ -159,7 +173,6 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
 
 /**
  * @def SET_BALL_SPEED_Y
- * @ingroup set_ball_speed_flags
  *
  * Sets the Y axis speed of the ball (dy)
  */
@@ -167,7 +180,6 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
 
 /**
  * @def SET_BALL_SPEED_MAX
- * @ingroup set_ball_speed_flags
  *
  * Sets the maximum speed either axis of the ball can have
  */
@@ -175,7 +187,6 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
 
 /**
  * @def SET_BALL_SPEED_AXES
- * @ingroup set_ball_speed_flags
  *
  * Sets both the X and Y axis speeds of the ball (dx and dy)
  */
@@ -183,12 +194,12 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
 
 /**
  * @def SET_BALL_SPEED_ALL
- * @ingroup set_ball_speed_flags
  *
  * Sets both the axes (X and Y) speeds as well as the max speed that the ball
  * can have along either axis.
  */
 #define SET_BALL_SPEED_ALL  SET_BALL_SPEED_AXES | SET_BALL_SPEED_MAX
+/**@}*/
 
 /**
  * @brief Sets the speed of the ball
@@ -245,4 +256,5 @@ void checkBallCollisions(ball_t *ball, void (*callback)());
  */
 void updateBallPosition(ball_t *ball, unsigned int milli_seconds);
 
+/** @}*/
 #endif

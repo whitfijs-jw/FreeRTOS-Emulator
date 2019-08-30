@@ -1,12 +1,22 @@
 /**
  * @file TUM_Draw.h
  * @author Alex Hoffman
- * @date 27 Auguest 2019
+ * @date 27 August 2019
  * @brief A SDL2 based library to implement work queue based drawing of graphical
  * elements. Allows for drawing using SDL2 from multiple threads.
  *
  * @mainpage FreeRTOS Simulator Graphical Library
  *
+ * @section intro_sec About this library
+ *
+ * This basic API aims to provide a simple method for drawing 
+ * graphical objects onto a screen in a thread-safe and consistent fashion.
+ * The library is built on top of the widely used SDL2 graphics, text and sound
+ * libraries. The core of the library is the functionality found in @ref tum_draw
+ * with extra features such as event handling and sound found in the auxiliary
+ * files.
+ *
+ * @section licence_sec Licence
  * @verbatim
    ----------------------------------------------------------------------
     Copyright (C) Alexander Hoffman, 2019
@@ -64,43 +74,23 @@
 #define mainGENERIC_STACK_SIZE  ( ( unsigned short ) 2560 )
 
 /**
- * @defgroup rgb_colours RGB hex colours
+ * @ingroup tum_draw
+ * @defgroup hex_rgb_colours Hex RGB colours
  *
  * RRGGBB colours used by TUM Draw backend, colour standard is the same as the
  * common html standard
- */
-/**
- * @ingroup rgb_colours
+ *
+ * @{
  */
 #define Red     0xFF0000
-/**
- * @ingroup rgb_colours
- */
 #define Green   0x00FF00
-/**
- * @ingroup rgb_colours
- */
 #define Blue    0x0000FF
-/**
- * @ingroup rgb_colours
- */
 #define Yellow  0xFFFF00
-/**
- * @ingroup rgb_colours
- */
 #define Aqua    0x00FFFF
-/**
- * @ingroup rgb_colours
- */
 #define Fuchsia 0xFF00FF
-/**
- * @ingroup rgb_colours
- */
 #define White   0xFFFFFF
-/**
- * @ingroup rgb_colours
- */
 #define Black   0x000000
+/**@}*/
 
 /**
  * @brief Semaphore that signals when the TUM Draw backend is finished drawing
@@ -109,18 +99,19 @@
 extern SemaphoreHandle_t DisplayReady;
 
 /**
- * @typedef coord_t
- * @brief Typedef for @ref coord
- */
-
-/**
- * @struct coord
  * @brief Holds a pixel co-ordinate
  */
 typedef struct coord {
 	unsigned short x; /*!< X axis coord */
 	unsigned short y; /*!< Y axis coord */
 } coord_t;
+
+/**
+ * @defgroup tum_draw TUM Draw API
+ *
+ * Functions to draw various shapes and lines on the screen
+ * @{
+ */
 
 /**
  * @brief Returns a string error message from the TUM Draw back end
@@ -157,13 +148,6 @@ void vExitDrawing(void);
 void vDrawUpdateScreen(void);
 
 /**
- * @defgroup tum_draw TUM Draw API
- *
- * Functions to draw various shapes and lines on the screen
- */
-
-/**
- * @ingroup tum_draw
  * @brief Sets the screen to a solid colour
  *
  * @param colour RGB colour to fill the screen with
@@ -172,7 +156,6 @@ void vDrawUpdateScreen(void);
 signed char tumDrawClear(unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws an ellipse on the screen
  *
  * @param x X coordinate of the center of the ellipse
@@ -186,7 +169,6 @@ signed char tumDrawEllipse(signed short x, signed short y, signed short rx,
 		signed short ry, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws an arc on the screen
  *
  * Draws an arc on the screen, the arc is determined from the starting and 
@@ -204,7 +186,6 @@ signed char tumDrawArc(signed short x, signed short y, signed short radius,
 		signed short start, signed short end, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Prints a string to the screen
  *
  * The given string is printed in the given colour at the location x,y. The
@@ -220,7 +201,6 @@ signed char tumDrawText(char *str, signed short x, signed short y,
 		unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Finds the width and height of a strings bounding box
  *
  * @param str String who's bounding box size is required
@@ -231,7 +211,6 @@ signed char tumDrawText(char *str, signed short x, signed short y,
 void tumGetTextSize(char *str, unsigned int *width, unsigned int *height);
 
 /**
- * @ingroup tum_draw
  * @brief Draws a filled box on the screen
  *
  * @param x X coordinate of the top left point of the box 
@@ -245,7 +224,6 @@ signed char tumDrawBox(signed short x, signed short y, signed short w,
 		signed short h, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws an unfilled box on the screen
  *
  * @param x X coordinate of the top left point of the box 
@@ -259,7 +237,6 @@ signed char tumDrawFilledBox(signed short x, signed short y, signed short w,
 		signed short h, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws a filled circle on the screen
  *
  * @param x X coordinate of the center of the circle 
@@ -272,7 +249,6 @@ signed char tumDrawCircle(signed short x, signed short y, signed short radius,
 		unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws a line on the screen
  *
  * @param x1 X coordinate of the starting point of the line
@@ -287,7 +263,6 @@ signed char tumDrawLine(signed short x1, signed short y1, signed short x2,
 		signed short y2, unsigned char thickness, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws a polygon on the screen
  *
  * Drawing a polygon requires an array of points, each given by a @ref coord.
@@ -302,7 +277,6 @@ signed char tumDrawLine(signed short x1, signed short y1, signed short x2,
 signed char tumDrawPoly(coord_t *points, int n, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws a triangle on the screen
  *
  * @param points Points array giving the three corner points of the triangle
@@ -312,7 +286,6 @@ signed char tumDrawPoly(coord_t *points, int n, unsigned int colour);
 signed char tumDrawTriangle(coord_t *points, unsigned int colour);
 
 /**
- * @ingroup tum_draw
  * @brief Draws an image on the screen
  *
  * @param filename Filename of the image to be drawn 
@@ -323,7 +296,6 @@ signed char tumDrawTriangle(coord_t *points, unsigned int colour);
 signed char tumDrawImage(char *filename, signed short x, signed short y);
 
 /**
-* @ingroup tum_draw
 * @brief Gets the width and height of an image
 *
 * @param filename Image filename to be tested
@@ -334,7 +306,6 @@ signed char tumDrawImage(char *filename, signed short x, signed short y);
 void tumGetImageSize(char *filename, int *w, int *h);
 
 /**
- * @ingroup tum_draw
  * @brief Draws a scaled image on the screen
  *
  * @param filename Filename of the image to be drawn 
@@ -347,7 +318,6 @@ signed char tumDrawScaledImage(char *filename, signed short x, signed short y,
         float scale);
 
 /**
- * @ingroup tum_draw
  * @brief Draws an arrow on the screen
  *
  * @param x1 X coordinate of the tail of the arrow
@@ -362,5 +332,10 @@ signed char tumDrawScaledImage(char *filename, signed short x, signed short y,
 signed char tumDrawArrow(unsigned short x1, unsigned short y1,
 		unsigned short x2, unsigned short y2, unsigned short head_length,
 		unsigned char thickness, unsigned int colour);
+
+/**
+* @}
+*/
+
 
 #endif
