@@ -28,9 +28,19 @@
 #define NEXT_TASK   0 
 #define PREV_TASK   1
 
-#define STARTING_STATE  STATE_ONE
+#define STARTING_STATE  STATE_TWO
 
 #define STATE_DEBOUNCE_DELAY   100 
+
+#define PADDLE_Y_INCREMENT 5
+#define PADDLE_LENGTH   SCREEN_HEIGHT / 5
+#define PADDLE_Y_INCREMENTS (SCREEN_HEIGHT - PADDLE_LENGTH) / PADDLE_Y_INCREMENT
+#define PADDLE_START_LOCATION_Y   SCREEN_HEIGHT / 2 - PADDLE_LENGTH / 2
+#define PADDLE_EDGE_OFFSET  10
+#define PADDLE_WIDTH    10
+
+#define START_LEFT  1
+#define START_RIGHT 0
 
 const unsigned char next_state_signal = NEXT_TASK;
 const unsigned char prev_state_signal = PREV_TASK;
@@ -239,6 +249,45 @@ void vCheckStateInput(void) {
 	xSemaphoreGive(buttons.lock);
 }
 
+void vIncrementPaddleY(unsigned short *paddle) {
+    if (*paddle != 0)
+        (*paddle)--;
+}
+
+void vDecrementPaddleY(unsigned short *paddle) {
+    if (*paddle != PADDLE_Y_INCREMENTS)
+        (*paddle)++;
+}
+
+void vCheckPongInput(unsigned short *left_paddle_y, unsigned short *right_paddle_y) {
+	xGetButtonInput(); //Update global button data
+
+	xSemaphoreTake(buttons.lock, portMAX_DELAY);
+	if (buttons.buttons[KEYCODE(C)]) {
+		xSemaphoreGive(buttons.lock);
+		xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+		return;
+	}
+	if (buttons.buttons[KEYCODE(E)]) {
+		xSemaphoreGive(buttons.lock);
+		xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
+		return;
+	}
+    if (buttons.buttons[KEYCODE(W)]) {
+        vIncrementPaddleY(left_paddle_y);    
+    }
+    if (buttons.buttons[KEYCODE(S)]) {
+        vDecrementPaddleY(left_paddle_y);
+    }
+    if (buttons.buttons[KEYCODE(UP)]) {
+        vIncrementPaddleY(right_paddle_y);    
+    }
+    if (buttons.buttons[KEYCODE(DOWN)]) {
+        vDecrementPaddleY(right_paddle_y);
+    }
+	xSemaphoreGive(buttons.lock);
+}
+
 void vDemoTask1(void *pvParameters) {
 	signed char ret = 0;
 
@@ -256,8 +305,63 @@ void vDemoTask1(void *pvParameters) {
 	}
 }
 
-void playBallSound(void) {
+void playBallSound(void *args) {
     vPlaySample(a3);
+}
+
+typedef struct game_info{
+    ball_t *ball;
+    unsigned int left_score;
+    unsigned int right_score;
+    unsigned short left_paddle;
+    unsigned short right_paddle;
+}game_info_t;
+
+void vResetPaddles(game_info_t *gi) {
+    gi->left_paddle = PADDLE_Y_INCREMENTS / 2;
+    gi->right_paddle = PADDLE_Y_INCREMENTS / 2;
+
+}
+
+void vRightWallCallback(void *gi) {
+    //Reset ball's position and speed and increment left player's scrore
+    setBallSpeed(((game_info_t *)gi)->ball, 0, 0, 0, SET_BALL_SPEED_AXES);
+    ((game_info_t *)gi)->left_score++;
+    vResetPaddles(gi);
+    setBallLocation(((game_info_t *)gi)->ball, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+}
+
+void vLeftWallCallback(void *gi) {
+    setBallSpeed(((game_info_t *)gi)->ball, 0, 0, 0, SET_BALL_SPEED_AXES);
+    ((game_info_t *)gi)->right_score++;
+    vResetPaddles(gi);
+}
+
+void vDrawWall(wall_t *wall) {
+    checkDraw(tumDrawFilledBox(wall->x1, wall->y1, wall->w, wall->h, 
+                wall->colour), __FUNCTION__);
+}
+
+void vDrawPaddle(wall_t *wall, unsigned short y_increment) {
+    // Set wall Y
+    setWallProperty(wall, 0, y_increment * PADDLE_Y_INCREMENT + 1, 0, 0, SET_WALL_Y); 
+    // Draw wall
+    vDrawWall(wall);
+}
+
+#define SCORE_CENTER_OFFSET     20
+#define SCORE_TOP_OFFSET        SCORE_CENTER_OFFSET
+
+void vDrawScores(unsigned int left, unsigned int right) {
+    static char buffer[5];
+    static unsigned int size;
+    sprintf(buffer, "%d", left);
+    tumGetTextSize(buffer, &size, NULL);
+    checkDraw(tumDrawText(buffer, SCREEN_WIDTH / 2 - size - SCORE_CENTER_OFFSET,
+                SCORE_TOP_OFFSET, White), __FUNCTION__);
+    sprintf(buffer, "%d", right);
+    checkDraw(tumDrawText(buffer, SCREEN_WIDTH / 2 + SCORE_CENTER_OFFSET,
+                SCORE_TOP_OFFSET, White), __FUNCTION__);
 }
 
 void vDemoTask2(void *pvParameters) {
@@ -265,50 +369,63 @@ void vDemoTask2(void *pvParameters) {
 	xLastWakeTime = xTaskGetTickCount();
     prevWakeTime = xLastWakeTime;
 	const TickType_t updatePeriod = 10;
+    
+    ball_t *my_ball = createBall(SCREEN_WIDTH / 2, SCREEN_HEIGHT/2, White, 20,
+            1000, &playBallSound, NULL);
 
-    ball_t *my_ball = createBall(SCREEN_WIDTH / 2, SCREEN_HEIGHT/2, Black, 20,
-            1000, &playBallSound);
-    setBallSpeed(my_ball, 250, 250, 0, SET_BALL_SPEED_AXES); 
+    game_info_t game_info = {0};
+    game_info.ball = my_ball;
+    unsigned int left_score = 0;
+    unsigned int right_score = 0;
+    unsigned char ball_moving = 0;
+    unsigned char ball_start_direction = 0;
+    vResetPaddles(&game_info);
+
+    setBallSpeed(my_ball, 250, 250, 0, SET_BALL_SPEED_AXES);
 
     //Left wall
-    wall_t *left_wall = createWall(CAVE_X - CAVE_THICKNESS, CAVE_Y,
-        CAVE_THICKNESS, CAVE_SIZE_Y, 0.2, Red, NULL);
+    wall_t *left_wall = createWall(1, 1, 1, SCREEN_HEIGHT, 0.1, White, 
+            &vLeftWallCallback, &game_info);
     //Right wall
-    wall_t *right_wall = createWall(CAVE_X + CAVE_SIZE_X, CAVE_Y,
-            CAVE_THICKNESS, CAVE_SIZE_Y, 0.2, Red, NULL);
+    wall_t *right_wall = createWall(SCREEN_WIDTH - 1, 1, 1, SCREEN_HEIGHT, 0.1, 
+            White, &vRightWallCallback, &game_info);
     //Top wall
-    wall_t *top_wall = createWall(CAVE_X - CAVE_THICKNESS, CAVE_Y - CAVE_THICKNESS,
-            CAVE_SIZE_X + CAVE_THICKNESS * 2, CAVE_THICKNESS, 0.2, Blue, NULL);
+    wall_t *top_wall = createWall(1, 1, SCREEN_WIDTH, 1, 0.1, White, NULL, NULL);
     //Bottom wall
-    wall_t *bottom_wall = createWall(CAVE_X - CAVE_THICKNESS, CAVE_Y + CAVE_SIZE_Y,
-            CAVE_SIZE_X + CAVE_THICKNESS * 2, CAVE_THICKNESS, 0.2, Blue, NULL);
+    wall_t *bottom_wall = createWall(1, SCREEN_HEIGHT - 1, SCREEN_WIDTH, 1, 
+            0.1, White, NULL, NULL);
+
+    //Left paddle
+    wall_t *left_paddle = createWall (PADDLE_EDGE_OFFSET, PADDLE_START_LOCATION_Y, 
+            PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, NULL, NULL);
+
+    //Right paddle
+    wall_t *right_paddle = createWall(SCREEN_WIDTH - PADDLE_EDGE_OFFSET - PADDLE_WIDTH,
+            PADDLE_START_LOCATION_Y, PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, 
+            NULL, NULL);
 
     while(1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
-            // Get input and check for state change
-			vCheckStateInput();
+            // Get input 
+			vCheckPongInput(&game_info.left_paddle, &game_info.right_paddle);
             
             // Clear screen
-		    checkDraw(tumDrawClear(White), __FUNCTION__);
+		    checkDraw(tumDrawClear(Black), __FUNCTION__);
             
-            vDrawStaticItems();
-
             // Draw the walls
-            checkDraw(tumDrawFilledBox(left_wall->x1, left_wall->y1,
-                        left_wall->w, left_wall->h, left_wall->colour),
-                    __FUNCTION__);
-            checkDraw(tumDrawFilledBox(right_wall->x1, right_wall->y1,
-                        right_wall->w, right_wall->h, right_wall->colour),
-                    __FUNCTION__);
-            checkDraw(tumDrawFilledBox(top_wall->x1, top_wall->y1,
-                        top_wall->w, top_wall->h, top_wall->colour),
-                    __FUNCTION__);
-            checkDraw(tumDrawFilledBox(bottom_wall->x1, bottom_wall->y1,
-                        bottom_wall->w, bottom_wall->h, bottom_wall->colour),
-                    __FUNCTION__);
+            vDrawWall(left_wall);
+            vDrawWall(right_wall);
+            vDrawWall(top_wall);
+            vDrawWall(bottom_wall);
+
+            // Draw the paddles
+            vDrawPaddle(left_paddle, game_info.left_paddle);
+            vDrawPaddle(right_paddle, game_info.right_paddle);
+
+            vDrawScores(game_info.left_score, game_info.right_score);
 
             // Check if ball has made a collision
-            checkBallCollisions(my_ball, NULL);
+            checkBallCollisions(my_ball, NULL, NULL);
         
             // Update the balls position now that possible collisions have
             // updated its speeds
