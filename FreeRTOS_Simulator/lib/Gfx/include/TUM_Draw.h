@@ -74,8 +74,14 @@
 #define mainGENERIC_STACK_SIZE  ( ( unsigned short ) 2560 )
 
 /**
- * @ingroup tum_draw
- * @defgroup hex_rgb_colours Hex RGB colours
+ * @defgroup tum_draw TUM Draw API
+ *
+ * Functions to draw various shapes and lines on the screen
+ * @{
+ */
+
+/**
+ * @name Hex RGB colours
  *
  * RRGGBB colours used by TUM Draw backend, colour standard is the same as the
  * common html standard
@@ -105,13 +111,6 @@ typedef struct coord {
 	unsigned short x; /*!< X axis coord */
 	unsigned short y; /*!< Y axis coord */
 } coord_t;
-
-/**
- * @defgroup tum_draw TUM Draw API
- *
- * Functions to draw various shapes and lines on the screen
- * @{
- */
 
 /**
  * @brief Returns a string error message from the TUM Draw back end

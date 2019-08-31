@@ -156,8 +156,7 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
         void (*callback)());
 
 /**
- * @ingroup tum_ball
- * @defgroup set_ball_speed_flags Ball speed set flags
+ * @name Ball speed set flags
  *
  * Flags passed to @ref setBallSpeed to set various speed properties of a ball
  *
@@ -210,7 +209,7 @@ wall_t *createWall(unsigned short x1, unsigned short y1, unsigned short w,
  * @param dy New Y axis speed that is to be set
  * @param max_speed New maximum speed limit that is to be set
  * @param flags Flag specifying which attributes of the references ball are
- * to be set. See @ref set_ball_speed_flags
+ * to be set.
  * @return NULL Always returns NULL
  */
 void setBallSpeed(ball_t *ball, float dx, float dy, float max_speed, 
