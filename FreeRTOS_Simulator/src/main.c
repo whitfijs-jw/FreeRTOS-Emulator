@@ -20,7 +20,7 @@
 
 #define STATE_QUEUE_LENGTH 1
 
-#define STATE_COUNT 2
+#define STATE_COUNT 1
 
 #define STATE_ONE   0
 #define STATE_TWO   1
@@ -28,7 +28,7 @@
 #define NEXT_TASK   0 
 #define PREV_TASK   1
 
-#define STARTING_STATE  STATE_TWO
+#define STARTING_STATE  STATE_ONE
 
 #define STATE_DEBOUNCE_DELAY   100 
 
@@ -40,15 +40,23 @@
 #define PADDLE_WIDTH    10
 
 #define START_LEFT  1
-#define START_RIGHT 0
+#define START_RIGHT 2
+
+const unsigned char start_left = START_LEFT;
+const unsigned char start_right = START_RIGHT;
 
 const unsigned char next_state_signal = NEXT_TASK;
 const unsigned char prev_state_signal = PREV_TASK;
 
-static TaskHandle_t DemoTask1 = NULL;
-static TaskHandle_t DemoTask2 = NULL;
+static TaskHandle_t LeftPaddleTask = NULL;
+static TaskHandle_t RightPaddleTask = NULL;
+static TaskHandle_t PongControlTask = NULL;
 static QueueHandle_t StateQueue = NULL;
+static QueueHandle_t LeftScoreQueue = NULL;
+static QueueHandle_t RightScoreQueue = NULL;
+static QueueHandle_t StartDirectionQueue = NULL;
 static SemaphoreHandle_t DrawReady = NULL;
+static SemaphoreHandle_t BallInactive = NULL;
 
 typedef struct buttons_buffer {
 	unsigned char buttons[SDL_NUM_SCANCODES];
@@ -120,12 +128,9 @@ void basicSequentialStateMachine(void *pvParameters) {
         if (state_changed) {
             switch (current_state) {
             case STATE_ONE:
-                vTaskSuspend(DemoTask2);
-                vTaskResume(DemoTask1);
-                break;
-            case STATE_TWO:
-                vTaskSuspend(DemoTask1);
-                vTaskResume(DemoTask2);
+                vTaskResume(PongControlTask);
+                vTaskResume(LeftPaddleTask);
+                vTaskResume(RightPaddleTask);
                 break;
             default:
                 break;
@@ -142,7 +147,7 @@ void vSwapBuffers(void *pvParameters) {
 
 	while (1) {
 		xSemaphoreTake(DisplayReady, portMAX_DELAY);
-		xSemaphoreGive(DrawReady);
+        xSemaphoreGive(DrawReady);
 		vDrawUpdateScreen();
 		vTaskDelayUntil(&xLastWakeTime, frameratePeriod);
 	}
@@ -156,185 +161,62 @@ void xGetButtonInput(void) {
 	xSemaphoreGive(buttons.lock);
 }
 
-#define CAVE_SIZE_X 	SCREEN_WIDTH / 2
-#define CAVE_SIZE_Y 	SCREEN_HEIGHT / 2
-#define CAVE_X 		    CAVE_SIZE_X / 2
-#define CAVE_Y 		    CAVE_SIZE_Y / 2
-#define CAVE_THICKNESS 	25
-
-void vDrawCaveBoundingBox(void) {
-	checkDraw(tumDrawFilledBox(CAVE_X - CAVE_THICKNESS, CAVE_Y - CAVE_THICKNESS,
-		CAVE_SIZE_X + CAVE_THICKNESS * 2, CAVE_SIZE_Y + CAVE_THICKNESS * 2, Red),
-        __FUNCTION__);
-	
-	checkDraw(tumDrawFilledBox(CAVE_X, CAVE_Y, CAVE_SIZE_X, CAVE_SIZE_Y, Aqua),
-            __FUNCTION__);
-}
-
-void vDrawCave(void) {
-	static unsigned short circlePositionX, circlePositionY;
-
-    vDrawCaveBoundingBox();
-
-	circlePositionX = CAVE_X + xGetMouseX() / 2;
-	circlePositionY = CAVE_Y + xGetMouseY() / 2;
-
-    tumDrawCircle(circlePositionX, circlePositionY, 20, Green);
-}
-
-void vDrawHelpText(void) {
-	static char str[100] = { 0 };
-	static unsigned int text_width;
-
-	tumGetTextSize((char *) str, &text_width, NULL);
-
-	sprintf(str, "[Q]uit, [C]hang[e] State");
-
-    checkDraw(tumDrawText(str, SCREEN_WIDTH - text_width - 10, DEFAULT_FONT_SIZE * 0.5,
-			Black), __FUNCTION__);
-}
-
-#define LOGO_FILENAME       "../resources/freertos.jpg"
-
-void vDrawLogo(void) {
-    static unsigned int image_height;
-    tumGetImageSize(LOGO_FILENAME, NULL, &image_height);
-    checkDraw(tumDrawScaledImage(LOGO_FILENAME, 10, 
-                SCREEN_HEIGHT - 10 - image_height * 0.3, 0.3), __FUNCTION__);
-}
-
-void vDrawStaticItems(void) {
-    vDrawHelpText();
-    vDrawLogo();
-}
-
-void vDrawButtonText(void) {
-	static char str[100] = { 0 };
-	
-    sprintf(str, "Axis 1: %5d | Axis 2: %5d", xGetMouseX(), xGetMouseY());
-
-	checkDraw(tumDrawText(str, 10, DEFAULT_FONT_SIZE * 0.5, Black), __FUNCTION__);
-
-	if (xSemaphoreTake(buttons.lock, portMAX_DELAY) == pdTRUE){
-        sprintf(str, "W: %d | S: %d | A: %d | D: %d", buttons.buttons[KEYCODE(W)],
-                buttons.buttons[KEYCODE(S)], buttons.buttons[KEYCODE(A)],
-                buttons.buttons[KEYCODE(D)]);
-        xSemaphoreGive(buttons.lock);
-        checkDraw(tumDrawText(str, 10, DEFAULT_FONT_SIZE * 2, Black), __FUNCTION__);
-    }
-
-	if (xSemaphoreTake(buttons.lock, portMAX_DELAY) == pdTRUE) {
-        sprintf(str, "UP: %d | DOWN: %d | LEFT: %d | RIGHT: %d",
-                buttons.buttons[KEYCODE(UP)], buttons.buttons[KEYCODE(DOWN)],
-                buttons.buttons[KEYCODE(LEFT)], buttons.buttons[KEYCODE(RIGHT)]);
-        xSemaphoreGive(buttons.lock);
-	    checkDraw(tumDrawText(str, 10, DEFAULT_FONT_SIZE * 3.5, Black), __FUNCTION__);
-    }
-}
-
-void vCheckStateInput(void) {
-	xGetButtonInput(); //Update global button data
-
-	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	if (buttons.buttons[KEYCODE(C)]) {
-		xSemaphoreGive(buttons.lock);
-		xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
-		return;
-	}
-	if (buttons.buttons[KEYCODE(E)]) {
-		xSemaphoreGive(buttons.lock);
-		xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
-		return;
-	}
-	xSemaphoreGive(buttons.lock);
-}
-
 void vIncrementPaddleY(unsigned short *paddle) {
-    if (*paddle != 0)
-        (*paddle)--;
+    if(paddle)
+        if (*paddle != 0)
+            (*paddle)--;
 }
 
 void vDecrementPaddleY(unsigned short *paddle) {
-    if (*paddle != PADDLE_Y_INCREMENTS)
-        (*paddle)++;
+    if(paddle)
+        if (*paddle != PADDLE_Y_INCREMENTS)
+            (*paddle)++;
 }
 
-void vCheckPongInput(unsigned short *left_paddle_y, unsigned short *right_paddle_y) {
+unsigned char xCheckPongRightInput(unsigned short *right_paddle_y) {
 	xGetButtonInput(); //Update global button data
 
 	xSemaphoreTake(buttons.lock, portMAX_DELAY);
-	if (buttons.buttons[KEYCODE(C)]) {
-		xSemaphoreGive(buttons.lock);
-		xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
-		return;
-	}
-	if (buttons.buttons[KEYCODE(E)]) {
-		xSemaphoreGive(buttons.lock);
-		xQueueSend(StateQueue, &prev_state_signal, portMAX_DELAY);
-		return;
-	}
-    if (buttons.buttons[KEYCODE(W)]) {
-        vIncrementPaddleY(left_paddle_y);    
-    }
-    if (buttons.buttons[KEYCODE(S)]) {
-        vDecrementPaddleY(left_paddle_y);
-    }
     if (buttons.buttons[KEYCODE(UP)]) {
         vIncrementPaddleY(right_paddle_y);    
+	    xSemaphoreGive(buttons.lock);
+        return 1;
     }
     if (buttons.buttons[KEYCODE(DOWN)]) {
         vDecrementPaddleY(right_paddle_y);
+        xSemaphoreGive(buttons.lock);
+        return 1;
     }
 	xSemaphoreGive(buttons.lock);
+    return 0;
 }
 
-void vDemoTask1(void *pvParameters) {
-	signed char ret = 0;
+unsigned char xCheckPongLeftInput(unsigned short *left_paddle_y) {
+	xGetButtonInput(); //Update global button data
 
-	while (1) {
-		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
-            // Get input and check for state change
-			vCheckStateInput();
-            
-            // Clear screen
-            checkDraw(tumDrawClear(White), __FUNCTION__);
-            
-			vDrawCave();
-            vDrawButtonText();
-		}
-	}
+	xSemaphoreTake(buttons.lock, portMAX_DELAY);
+    if (buttons.buttons[KEYCODE(W)]) {
+        vIncrementPaddleY(left_paddle_y);    
+	    xSemaphoreGive(buttons.lock);
+        return 1;
+    }
+    if (buttons.buttons[KEYCODE(S)]) {
+        vDecrementPaddleY(left_paddle_y);
+	    xSemaphoreGive(buttons.lock);
+        return 1;
+    }
+	xSemaphoreGive(buttons.lock);
+    return 0;
+}
+
+unsigned char xCheckForInput(void) {
+    if(xCheckPongLeftInput(NULL) || xCheckPongRightInput(NULL))
+        return 1;
+    return 0;
 }
 
 void playBallSound(void *args) {
     vPlaySample(a3);
-}
-
-typedef struct game_info{
-    ball_t *ball;
-    unsigned int left_score;
-    unsigned int right_score;
-    unsigned short left_paddle;
-    unsigned short right_paddle;
-}game_info_t;
-
-void vResetPaddles(game_info_t *gi) {
-    gi->left_paddle = PADDLE_Y_INCREMENTS / 2;
-    gi->right_paddle = PADDLE_Y_INCREMENTS / 2;
-
-}
-
-void vRightWallCallback(void *gi) {
-    //Reset ball's position and speed and increment left player's scrore
-    setBallSpeed(((game_info_t *)gi)->ball, 0, 0, 0, SET_BALL_SPEED_AXES);
-    ((game_info_t *)gi)->left_score++;
-    vResetPaddles(gi);
-    setBallLocation(((game_info_t *)gi)->ball, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-}
-
-void vLeftWallCallback(void *gi) {
-    setBallSpeed(((game_info_t *)gi)->ball, 0, 0, 0, SET_BALL_SPEED_AXES);
-    ((game_info_t *)gi)->right_score++;
-    vResetPaddles(gi);
 }
 
 void vDrawWall(wall_t *wall) {
@@ -364,7 +246,85 @@ void vDrawScores(unsigned int left, unsigned int right) {
                 SCORE_TOP_OFFSET, White), __FUNCTION__);
 }
 
-void vDemoTask2(void *pvParameters) {
+typedef struct player_data{
+    wall_t *paddle;
+    unsigned short paddle_position;
+    unsigned int score;
+}player_data_t;
+
+void vResetPaddle(wall_t *wall){
+   setWallProperty(wall, 0, PADDLE_Y_INCREMENTS / 2, 0, 0, SET_WALL_Y); 
+}
+
+void vRightWallCallback(void *player_data) {
+    //Reset ball's position and speed and increment left player's score
+    ((player_data_t *)player_data)->score++;
+    if (RightScoreQueue)
+        xQueueOverwrite(RightScoreQueue, &((player_data_t *)player_data)->score);
+    vResetPaddle(((player_data_t *)player_data)->paddle);
+    xSemaphoreGive(BallInactive);
+    xQueueOverwrite(StartDirectionQueue, &start_right);
+}
+
+void vRightPaddleTask(void *pvParameters) {
+    player_data_t right_player = {0};
+    right_player.paddle_position = PADDLE_Y_INCREMENTS / 2;
+
+    //Right wall
+    wall_t *right_wall = createWall(SCREEN_WIDTH - 1, 1, 1, SCREEN_HEIGHT, 0.1, 
+            White, &vRightWallCallback, &right_player);
+    //Right paddle
+    right_player.paddle = createWall(SCREEN_WIDTH - PADDLE_EDGE_OFFSET - PADDLE_WIDTH,
+            PADDLE_START_LOCATION_Y, PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, 
+            NULL, NULL);
+    
+    RightScoreQueue = xQueueCreate(1, sizeof(unsigned int));
+
+	while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+
+        // Get input 
+        xCheckPongRightInput(&right_player.paddle_position);
+        
+        vDrawWall(right_wall);
+        vDrawPaddle(right_player.paddle, right_player.paddle_position);
+	}
+}
+
+void vLeftWallCallback(void *player_data) {
+    ((player_data_t *)player_data)->score++;
+    if (LeftScoreQueue)
+        xQueueOverwrite(LeftScoreQueue, &((player_data_t *)player_data)->score);
+    vResetPaddle(((player_data_t *)player_data)->paddle);
+    xSemaphoreGive(BallInactive);
+    xQueueOverwrite(StartDirectionQueue, &start_left);
+}
+
+void vLeftPaddleTask(void *pvParameters) {
+    player_data_t left_player = {0};
+    left_player.paddle_position = PADDLE_Y_INCREMENTS / 2;
+
+    //Left wall
+    wall_t *left_wall = createWall(1, 1, 1, SCREEN_HEIGHT, 0.1, White, 
+            &vLeftWallCallback, &left_player);
+    //Left paddle
+    left_player.paddle = createWall (PADDLE_EDGE_OFFSET, PADDLE_START_LOCATION_Y, 
+            PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, NULL, NULL);
+    
+    LeftScoreQueue = xQueueCreate(1, sizeof(unsigned int));
+    
+	while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
+        
+        // Get input 
+        xCheckPongLeftInput(&left_player.paddle_position);
+
+        vDrawWall(left_wall);
+        vDrawPaddle(left_player.paddle, left_player.paddle_position);
+	}
+}
+
+void vPongControlTask(void *pvParameters) {
 	TickType_t xLastWakeTime, prevWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
     prevWakeTime = xLastWakeTime;
@@ -373,66 +333,78 @@ void vDemoTask2(void *pvParameters) {
     ball_t *my_ball = createBall(SCREEN_WIDTH / 2, SCREEN_HEIGHT/2, White, 20,
             1000, &playBallSound, NULL);
 
-    game_info_t game_info = {0};
-    game_info.ball = my_ball;
+    unsigned char ball_active = 0;
+    unsigned char ball_direction = 0;
+	
     unsigned int left_score = 0;
     unsigned int right_score = 0;
-    unsigned char ball_moving = 0;
-    unsigned char ball_start_direction = 0;
-    vResetPaddles(&game_info);
+
+    BallInactive = xSemaphoreCreateBinary();
+    StartDirectionQueue = xQueueCreate(1, sizeof(unsigned char));
 
     setBallSpeed(my_ball, 250, 250, 0, SET_BALL_SPEED_AXES);
 
-    //Left wall
-    wall_t *left_wall = createWall(1, 1, 1, SCREEN_HEIGHT, 0.1, White, 
-            &vLeftWallCallback, &game_info);
-    //Right wall
-    wall_t *right_wall = createWall(SCREEN_WIDTH - 1, 1, 1, SCREEN_HEIGHT, 0.1, 
-            White, &vRightWallCallback, &game_info);
     //Top wall
     wall_t *top_wall = createWall(1, 1, SCREEN_WIDTH, 1, 0.1, White, NULL, NULL);
     //Bottom wall
     wall_t *bottom_wall = createWall(1, SCREEN_HEIGHT - 1, SCREEN_WIDTH, 1, 
             0.1, White, NULL, NULL);
 
-    //Left paddle
-    wall_t *left_paddle = createWall (PADDLE_EDGE_OFFSET, PADDLE_START_LOCATION_Y, 
-            PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, NULL, NULL);
-
-    //Right paddle
-    wall_t *right_paddle = createWall(SCREEN_WIDTH - PADDLE_EDGE_OFFSET - PADDLE_WIDTH,
-            PADDLE_START_LOCATION_Y, PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, 
-            NULL, NULL);
-
     while(1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
-            // Get input 
-			vCheckPongInput(&game_info.left_paddle, &game_info.right_paddle);
             
-            // Clear screen
-		    checkDraw(tumDrawClear(Black), __FUNCTION__);
-            
+            // Ball is no longer active
+            if(xSemaphoreTake(BallInactive, 0) == pdTRUE) {
+                ball_active = 0;
+            }
+
+            if(!ball_active){
+                setBallLocation(my_ball, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+                setBallSpeed(my_ball, 0, 0, 0, SET_BALL_SPEED_AXES);
+                
+                // Draw the ball
+                checkDraw(tumDrawCircle(my_ball->x, my_ball->y, my_ball->radius,
+                            my_ball->colour), __FUNCTION__);
+
+                if(xCheckForInput()){
+                    xQueueReceive(StartDirectionQueue, &ball_direction, 0);
+                    ball_active = 1;
+                    switch(ball_direction){
+                    case START_LEFT:
+                        setBallSpeed(my_ball, -250, 250, 0, SET_BALL_SPEED_AXES);
+                        break;
+                    default:
+                    case START_RIGHT:
+                        setBallSpeed(my_ball, 250, 250, 0, SET_BALL_SPEED_AXES);
+                        break;
+                    }
+                }
+            }
+
+            xTaskNotifyGive(LeftPaddleTask);
+            xTaskNotifyGive(RightPaddleTask);
+        
+            checkDraw(tumDrawClear(Black), __FUNCTION__);
+
             // Draw the walls
-            vDrawWall(left_wall);
-            vDrawWall(right_wall);
             vDrawWall(top_wall);
             vDrawWall(bottom_wall);
 
-            // Draw the paddles
-            vDrawPaddle(left_paddle, game_info.left_paddle);
-            vDrawPaddle(right_paddle, game_info.right_paddle);
-
-            vDrawScores(game_info.left_score, game_info.right_score);
+            if (LeftScoreQueue)
+                xQueueReceive(LeftScoreQueue, &left_score, 0);
+            if (RightScoreQueue)
+                xQueueReceive(RightScoreQueue, &right_score, 0);
+            vDrawScores(left_score, right_score);
 
             // Check if ball has made a collision
             checkBallCollisions(my_ball, NULL, NULL);
-        
+
             // Update the balls position now that possible collisions have
             // updated its speeds
             updateBallPosition(my_ball, xLastWakeTime - prevWakeTime);
 
             // Draw the ball
-            checkDraw(tumDrawCircle(my_ball->x, my_ball->y, my_ball->radius, 
+            checkDraw(tumDrawCircle(my_ball->x, my_ball->y, my_ball->radius,
                         my_ball->colour), __FUNCTION__);
 
             //Keep track of when task last ran so that you know how many ticks
@@ -452,17 +424,20 @@ int main(int argc, char *argv[]) {
 	vInitEvents();
     vInitAudio(bin_folder_path);
 
-	xTaskCreate(vDemoTask1, "DemoTask1", mainGENERIC_STACK_SIZE, NULL,
-	    mainGENERIC_PRIORITY, &DemoTask1);
-	xTaskCreate(vDemoTask2, "DemoTask2", mainGENERIC_STACK_SIZE, NULL,
-	    mainGENERIC_PRIORITY, &DemoTask2);
+	xTaskCreate(vLeftPaddleTask, "LeftPaddleTask", mainGENERIC_STACK_SIZE, NULL,
+	    mainGENERIC_PRIORITY, &LeftPaddleTask);
+	xTaskCreate(vRightPaddleTask, "RightPaddleTask", mainGENERIC_STACK_SIZE, NULL,
+	    mainGENERIC_PRIORITY, &RightPaddleTask);
+	xTaskCreate(vPongControlTask, "PongControlTask", mainGENERIC_STACK_SIZE, NULL,
+	    mainGENERIC_PRIORITY, &PongControlTask);
 	xTaskCreate(basicSequentialStateMachine, "StateMachine",
 	    mainGENERIC_STACK_SIZE, NULL, configMAX_PRIORITIES - 1, NULL);
 	xTaskCreate(vSwapBuffers, "BufferSwapTask", mainGENERIC_STACK_SIZE, NULL,
 	    configMAX_PRIORITIES, NULL);
 
-	vTaskSuspend(DemoTask1);
-	vTaskSuspend(DemoTask2);
+	vTaskSuspend(LeftPaddleTask);
+	vTaskSuspend(RightPaddleTask);
+	vTaskSuspend(PongControlTask);
 
 	buttons.lock = xSemaphoreCreateMutex(); //Locking mechanism
 
