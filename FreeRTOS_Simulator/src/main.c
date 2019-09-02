@@ -20,7 +20,7 @@
 
 #define STATE_QUEUE_LENGTH 1
 
-#define STATE_COUNT 1
+#define STATE_COUNT 2
 
 #define STATE_ONE   0
 #define STATE_TWO   1
@@ -51,10 +51,13 @@ const unsigned char prev_state_signal = PREV_TASK;
 static TaskHandle_t LeftPaddleTask = NULL;
 static TaskHandle_t RightPaddleTask = NULL;
 static TaskHandle_t PongControlTask = NULL;
+static TaskHandle_t PausedStateTask = NULL;
+
 static QueueHandle_t StateQueue = NULL;
 static QueueHandle_t LeftScoreQueue = NULL;
 static QueueHandle_t RightScoreQueue = NULL;
 static QueueHandle_t StartDirectionQueue = NULL;
+
 static SemaphoreHandle_t DrawReady = NULL;
 static SemaphoreHandle_t BallInactive = NULL;
 
@@ -128,10 +131,16 @@ void basicSequentialStateMachine(void *pvParameters) {
         if (state_changed) {
             switch (current_state) {
             case STATE_ONE:
+                vTaskSuspend(PausedStateTask);
                 vTaskResume(PongControlTask);
                 vTaskResume(LeftPaddleTask);
                 vTaskResume(RightPaddleTask);
                 break;
+            case STATE_TWO: //paused
+                vTaskSuspend(PongControlTask);
+                vTaskSuspend(LeftPaddleTask);
+                vTaskSuspend(RightPaddleTask);
+                vTaskResume(PausedStateTask);
             default:
                 break;
             }
@@ -237,11 +246,11 @@ void vDrawPaddle(wall_t *wall, unsigned short y_increment) {
 void vDrawScores(unsigned int left, unsigned int right) {
     static char buffer[5];
     static unsigned int size;
-    sprintf(buffer, "%d", left);
+    sprintf(buffer, "%d", right);
     tumGetTextSize(buffer, &size, NULL);
     checkDraw(tumDrawText(buffer, SCREEN_WIDTH / 2 - size - SCORE_CENTER_OFFSET,
                 SCORE_TOP_OFFSET, White), __FUNCTION__);
-    sprintf(buffer, "%d", right);
+    sprintf(buffer, "%d", left);
     checkDraw(tumDrawText(buffer, SCREEN_WIDTH / 2 + SCORE_CENTER_OFFSET,
                 SCORE_TOP_OFFSET, White), __FUNCTION__);
 }
@@ -352,6 +361,22 @@ void vPongControlTask(void *pvParameters) {
 
     while(1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
+            xGetButtonInput(); //Update global button data
+
+            xSemaphoreTake(buttons.lock, portMAX_DELAY);
+            if (buttons.buttons[KEYCODE(P)]) {
+                xSemaphoreGive(buttons.lock);
+                xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+            }
+            
+            if (buttons.buttons[KEYCODE(R)]) {
+                ball_active = 0;
+                setBallLocation(my_ball, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+                setBallSpeed(my_ball, 0, 0, 0, SET_BALL_SPEED_AXES);
+                left_score = 0;
+                right_score = 1;
+            }
+            xSemaphoreGive(buttons.lock);
             
             // Ball is no longer active
             if(xSemaphoreTake(BallInactive, 0) == pdTRUE) {
@@ -416,6 +441,21 @@ void vPongControlTask(void *pvParameters) {
     }
 }
 
+void vPausedStateTask (void *pvParameters) {
+    while(1){
+        xGetButtonInput(); //Update global button data
+
+        xSemaphoreTake(buttons.lock, portMAX_DELAY);
+        if (buttons.buttons[KEYCODE(P)]) {
+            xSemaphoreGive(buttons.lock);
+            xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
+        }
+        xSemaphoreGive(buttons.lock);
+
+        vTaskDelay(10);
+    }
+}
+
 int main(int argc, char *argv[]) {
 
     char *bin_folder_path = getBinFolderPath(argv[0]);
@@ -428,6 +468,8 @@ int main(int argc, char *argv[]) {
 	    mainGENERIC_PRIORITY, &LeftPaddleTask);
 	xTaskCreate(vRightPaddleTask, "RightPaddleTask", mainGENERIC_STACK_SIZE, NULL,
 	    mainGENERIC_PRIORITY, &RightPaddleTask);
+	xTaskCreate(vPausedStateTask, "PausedStateTask", mainGENERIC_STACK_SIZE, NULL,
+	    mainGENERIC_PRIORITY, &PausedStateTask);
 	xTaskCreate(vPongControlTask, "PongControlTask", mainGENERIC_STACK_SIZE, NULL,
 	    mainGENERIC_PRIORITY, &PongControlTask);
 	xTaskCreate(basicSequentialStateMachine, "StateMachine",
@@ -438,6 +480,7 @@ int main(int argc, char *argv[]) {
 	vTaskSuspend(LeftPaddleTask);
 	vTaskSuspend(RightPaddleTask);
 	vTaskSuspend(PongControlTask);
+    vTaskSuspend(PausedStateTask);
 
 	buttons.lock = xSemaphoreCreateMutex(); //Locking mechanism
 
