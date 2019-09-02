@@ -258,7 +258,6 @@ void vDrawScores(unsigned int left, unsigned int right) {
 typedef struct player_data{
     wall_t *paddle;
     unsigned short paddle_position;
-    unsigned int score;
 }player_data_t;
 
 void vResetPaddle(wall_t *wall){
@@ -267,11 +266,15 @@ void vResetPaddle(wall_t *wall){
 
 void vRightWallCallback(void *player_data) {
     //Reset ball's position and speed and increment left player's score
-    ((player_data_t *)player_data)->score++;
+    const unsigned char point = 1;
+
     if (RightScoreQueue)
-        xQueueOverwrite(RightScoreQueue, &((player_data_t *)player_data)->score);
+        xQueueSend(RightScoreQueue, &point, portMAX_DELAY);
+    
     vResetPaddle(((player_data_t *)player_data)->paddle);
+
     xSemaphoreGive(BallInactive);
+
     xQueueOverwrite(StartDirectionQueue, &start_right);
 }
 
@@ -287,7 +290,7 @@ void vRightPaddleTask(void *pvParameters) {
             PADDLE_START_LOCATION_Y, PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, 
             NULL, NULL);
     
-    RightScoreQueue = xQueueCreate(1, sizeof(unsigned int));
+    RightScoreQueue = xQueueCreate(10, sizeof(unsigned char));
 
 	while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
@@ -301,11 +304,15 @@ void vRightPaddleTask(void *pvParameters) {
 }
 
 void vLeftWallCallback(void *player_data) {
-    ((player_data_t *)player_data)->score++;
+    const unsigned char point = 1;
+
     if (LeftScoreQueue)
-        xQueueOverwrite(LeftScoreQueue, &((player_data_t *)player_data)->score);
+        xQueueSend(LeftScoreQueue, &point, portMAX_DELAY);
+    
     vResetPaddle(((player_data_t *)player_data)->paddle);
+    
     xSemaphoreGive(BallInactive);
+    
     xQueueOverwrite(StartDirectionQueue, &start_left);
 }
 
@@ -320,7 +327,7 @@ void vLeftPaddleTask(void *pvParameters) {
     left_player.paddle = createWall (PADDLE_EDGE_OFFSET, PADDLE_START_LOCATION_Y, 
             PADDLE_WIDTH, PADDLE_LENGTH, 0.1, White, NULL, NULL);
     
-    LeftScoreQueue = xQueueCreate(1, sizeof(unsigned int));
+    LeftScoreQueue = xQueueCreate(10, sizeof(unsigned char));
     
 	while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
@@ -338,6 +345,7 @@ void vPongControlTask(void *pvParameters) {
 	xLastWakeTime = xTaskGetTickCount();
     prevWakeTime = xLastWakeTime;
 	const TickType_t updatePeriod = 10;
+    unsigned char score_flag;
     
     ball_t *my_ball = createBall(SCREEN_WIDTH / 2, SCREEN_HEIGHT/2, White, 20,
             1000, &playBallSound, NULL);
@@ -374,7 +382,7 @@ void vPongControlTask(void *pvParameters) {
                 setBallLocation(my_ball, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
                 setBallSpeed(my_ball, 0, 0, 0, SET_BALL_SPEED_AXES);
                 left_score = 0;
-                right_score = 1;
+                right_score = 0;
             }
             xSemaphoreGive(buttons.lock);
             
@@ -387,10 +395,6 @@ void vPongControlTask(void *pvParameters) {
                 setBallLocation(my_ball, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
                 setBallSpeed(my_ball, 0, 0, 0, SET_BALL_SPEED_AXES);
                 
-                // Draw the ball
-                checkDraw(tumDrawCircle(my_ball->x, my_ball->y, my_ball->radius,
-                            my_ball->colour), __FUNCTION__);
-
                 if(xCheckForInput()){
                     xQueueReceive(StartDirectionQueue, &ball_direction, 0);
                     ball_active = 1;
@@ -415,10 +419,15 @@ void vPongControlTask(void *pvParameters) {
             vDrawWall(top_wall);
             vDrawWall(bottom_wall);
 
-            if (LeftScoreQueue)
-                xQueueReceive(LeftScoreQueue, &left_score, 0);
-            if (RightScoreQueue)
-                xQueueReceive(RightScoreQueue, &right_score, 0);
+            //Check for score updates
+            if(RightScoreQueue)
+                while( xQueueReceive(RightScoreQueue, &score_flag, 0) == pdTRUE )
+                    right_score++;
+
+            if(LeftScoreQueue)
+                while( xQueueReceive(LeftScoreQueue, &score_flag, 0) == pdTRUE )
+                    left_score++;
+
             vDrawScores(left_score, right_score);
 
             // Check if ball has made a collision
@@ -442,6 +451,8 @@ void vPongControlTask(void *pvParameters) {
 }
 
 void vPausedStateTask (void *pvParameters) {
+    const char* paused_text = "PAUSED";
+    static int text_width;
     while(1){
         xGetButtonInput(); //Update global button data
 
@@ -451,6 +462,11 @@ void vPausedStateTask (void *pvParameters) {
             xQueueSend(StateQueue, &next_state_signal, portMAX_DELAY);
         }
         xSemaphoreGive(buttons.lock);
+
+        tumGetTextSize(paused_text, &text_width, NULL);
+
+        checkDraw(tumDrawText(paused_text, SCREEN_WIDTH / 2 - text_width / 2, 
+                    SCREEN_HEIGHT / 2, Red), __FUNCTION__);
 
         vTaskDelay(10);
     }
