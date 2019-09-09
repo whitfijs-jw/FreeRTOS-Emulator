@@ -419,16 +419,6 @@ void vPongControlTask(void *pvParameters)
 		GAME_FIELD_INNER, GAME_FIELD_INNER + GAME_FIELD_HEIGHT_INNER,
 		GAME_FIELD_WIDTH_INNER, WALL_THICKNESS, 0.1, White, NULL, NULL);
 
-	//Net
-	wall_t *net[NET_DOTS] = { 0 };
-	printf("%d %d\n", NET_DOT_HEIGHT, GAME_FIELD_INNER);
-	for (int i = 0; i < NET_DOTS; i++)
-		net[i] = createWall(SCREEN_WIDTH / 2 - NET_DOT_WIDTH / 2,
-				    GAME_FIELD_INNER +
-					    round(2.0 * i * NET_DOT_HEIGHT),
-				    NET_DOT_WIDTH, round(NET_DOT_HEIGHT), 0,
-				    White, NULL, NULL);
-
 	while (1) {
 		if (xSemaphoreTake(DrawReady, portMAX_DELAY) == pdTRUE) {
 			xGetButtonInput(); //Update global button data
@@ -491,7 +481,15 @@ void vPongControlTask(void *pvParameters)
 			vDrawWall(top_wall);
 			vDrawWall(bottom_wall);
 			for (int i = 0; i < NET_DOTS; i++)
-				vDrawWall(net[i]);
+				checkDraw(tumDrawFilledBox(
+						  SCREEN_WIDTH / 2 -
+							  NET_DOT_WIDTH / 2,
+						  GAME_FIELD_INNER +
+							  round(2.0 * i *
+								NET_DOT_HEIGHT),
+						  NET_DOT_WIDTH,
+						  round(NET_DOT_HEIGHT), White),
+					  __FUNCTION__);
 
 			//Check for score updates
 			if (RightScoreQueue)
