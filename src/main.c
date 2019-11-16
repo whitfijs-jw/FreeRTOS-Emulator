@@ -1,8 +1,14 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <SDL2/SDL_scancode.h>
+
+#include "AsyncIO.h"
+#include "AsyncIOSocket.h"
+#include "PosixMessageQueueIPC.h"
+#include "AsyncIOSerial.h"
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -36,6 +42,12 @@
 #include "tracer.h"
 #endif
 
+//SERIAL
+xQueueHandle xSerialRxQueue = NULL;
+static int iSerialReceive;
+xTaskHandle hSerialTask = NULL;
+//
+
 const unsigned char next_state_signal = NEXT_TASK;
 const unsigned char prev_state_signal = PREV_TASK;
 
@@ -50,6 +62,40 @@ typedef struct buttons_buffer {
 } buttons_buffer_t;
 
 static buttons_buffer_t buttons = { 0 };
+
+void prvSerialConsoleEchoTask(void *pvParameters)
+{
+	xQueueHandle hSerialRxQueue = (xQueueHandle)pvParameters;
+	unsigned char ucRx;
+	if (hSerialRxQueue) {
+		while (1) {
+			if (pdTRUE == xQueueReceive(hSerialRxQueue, &ucRx,
+						    portMAX_DELAY)) {
+				/** (void)write(iSerialReceive, &ucRx, 1); */
+				printf("%c");
+			}
+			printf("\n");
+		}
+	}
+
+	printf("Seriel Rx Task exiting\n");
+	vTaskDelete(NULL);
+}
+
+void serialInit(void)
+{
+	if (pdTRUE == lAsyncIOSerialOpen("/dev/ttyS0", &iSerialReceive)) {
+		xSerialRxQueue = xQueueCreate(2, sizeof(unsigned char));
+		(void)lAsyncIORegisterCallback(iSerialReceive,
+					       vAsyncSerialIODataAvailableISR,
+					       xSerialRxQueue);
+		xTaskCreate(prvSerialConsoleEchoTask, "SerialRx",
+			    configMINIMAL_STACK_SIZE, xSerialRxQueue,
+			    tskIDLE_PRIORITY + 4, &hSerialTask);
+	}
+
+	return;
+}
 
 void checkDraw(unsigned char status, const char *msg)
 {
@@ -390,6 +436,8 @@ int main(int argc, char *argv[])
 	vInitDrawing(bin_folder_path);
 	vInitEvents();
 	vInitAudio(bin_folder_path);
+
+	serialInit();
 
 	xTaskCreate(vDemoTask1, "DemoTask1", mainGENERIC_STACK_SIZE, NULL,
 		    mainGENERIC_PRIORITY, &DemoTask1);
