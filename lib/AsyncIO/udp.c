@@ -11,11 +11,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "FreeRTOS.h"
+#include "udp.h"
+
 #include "task.h"
 #include "semphr.h"
-
-#include "udp.h"
 
 #define CHECK(x)                                                               \
 	do {                                                                   \
@@ -28,8 +27,7 @@
 
 typedef struct async_callback {
 	int fd;
-	void (*callback)(int, void *);
-	void *args;
+	QueueHandle_t queue;
 	struct async_callback *next;
 	int type;
 	int protocol;
@@ -55,15 +53,14 @@ void addAsyncCallback(async_callback_t *cb)
 
 //TODO delete cb
 
-void asyncDefaultCallback(int fd, void *data)
-{
-	printf("Callback executed for %d\n", fd);
-}
-
 void sigactionHandler(int signal, siginfo_t *info, void *context)
 {
 	async_callback_t *iterator;
 	int fd;
+	ssize_t read_len;
+	char rx[200];
+	portBASE_TYPE false = pdFALSE;
+
 	CHECK(info);
 
 	/** socket file descriptor */
@@ -75,8 +72,12 @@ void sigactionHandler(int signal, siginfo_t *info, void *context)
 	     iterator->next && (iterator->fd != fd); iterator = iterator->next)
 		;
 
-	if (fd == iterator->fd)
-		(iterator->callback)(fd, iterator->args);
+	read_len = read(fd, &rx, 200);
+
+	if (read_len && iterator->queue)
+		for (unsigned int i = 0; i < read_len; i++)
+			xQueueSendFromISR(iterator->queue, &rx[i], &false);
+
 	xSemaphoreGive(cr.lock);
 }
 
@@ -97,7 +98,7 @@ void udpInit(void)
 		sigfillset(&sa.sa_mask);
 		sigdelset(&sa.sa_mask, SIGIO);
 
-		CHECK(sigaction(SIGIO, &sa, NULL));
+		CHECK(!sigaction(SIGIO, &sa, NULL));
 
 		cr.initialized = 1;
 	}
@@ -122,7 +123,7 @@ void makeAsync(int *fd)
 }
 
 void udpOpenSocket(char *ip, unsigned short port, int con_type,
-		   void (*callback)(int, void *), void *(args))
+		   xQueueHandle queue)
 {
 	//TODO error handling that doesn't exit
 	taskENTER_CRITICAL();
@@ -131,11 +132,7 @@ void udpOpenSocket(char *ip, unsigned short port, int con_type,
 
 	CHECK(cb);
 
-	if (callback)
-		cb->callback = callback;
-	else
-		cb->callback = asyncDefaultCallback;
-	cb->args = args;
+	cb->queue = queue;
 
 	if (con_type == SOCKET_TYPE_TCP) {
 		cb->type = SOCK_STREAM;
@@ -156,7 +153,9 @@ void udpOpenSocket(char *ip, unsigned short port, int con_type,
 
 	makeAsync(&cb->fd);
 
-	CHECK(bind(cb->fd, (struct sockaddr *)&cb->addr, sizeof(cb->addr)));
+	CHECK(!bind(cb->fd, (struct sockaddr *)&cb->addr, sizeof(cb->addr)));
+
+	addAsyncCallback(cb);
 
 	taskEXIT_CRITICAL();
 }

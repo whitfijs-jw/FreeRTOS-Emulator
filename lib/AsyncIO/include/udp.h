@@ -4,8 +4,11 @@
 #define SOCKET_TYPE_UDP IPPROTO_UDP
 #define SOCKET_TYPE_TCP IPPROTO_TCP
 
+#include "FreeRTOS.h"
+#include "queue.h"
+
 void udpInit(void);
 void udpOpenSocket(char *ip, unsigned short port, int con_type,
-		   void (*callback)(int, void *), void *(args));
+		   xQueueHandle queue);
 
 #endif

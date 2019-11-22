@@ -56,6 +56,7 @@ const unsigned char prev_state_signal = PREV_TASK;
 static TaskHandle_t DemoTask1 = NULL;
 static TaskHandle_t DemoTask2 = NULL;
 static QueueHandle_t StateQueue = NULL;
+static QueueHandle_t SerialQueue = NULL;
 static SemaphoreHandle_t DrawReady = NULL;
 
 typedef struct buttons_buffer {
@@ -396,17 +397,32 @@ void vDemoTask2(void *pvParameters)
 	}
 }
 
+void serialPrint(void *parameters)
+{
+	QueueHandle_t queue = (QueueHandle_t)parameters;
+	char rx;
+
+	while (1) {
+		xQueueReceive(queue, &rx, portMAX_DELAY);
+		printf("Rx: %c\n", rx);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	char *bin_folder_path = getBinFolderPath(argv[0]);
-	printf("%s\n", bin_folder_path);
 
 	vInitDrawing(bin_folder_path);
 	vInitEvents();
 	vInitAudio(bin_folder_path);
 
+	SerialQueue = xQueueCreate(200, sizeof(unsigned char));
 	udpInit();
-	udpOpenSocket(NULL, 3333, SOCKET_TYPE_UDP, NULL, NULL);
+	udpOpenSocket(NULL, 3333, SOCKET_TYPE_UDP, SerialQueue);
+
+	/** test task */
+	xTaskCreate(serialPrint, "serial print", mainGENERIC_STACK_SIZE,
+		    SerialQueue, mainGENERIC_PRIORITY, NULL);
 
 	xTaskCreate(vDemoTask1, "DemoTask1", mainGENERIC_STACK_SIZE, NULL,
 		    mainGENERIC_PRIORITY, &DemoTask1);
