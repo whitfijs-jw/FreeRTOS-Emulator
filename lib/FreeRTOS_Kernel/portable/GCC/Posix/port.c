@@ -201,7 +201,7 @@ void vPortStartFirstTask( void )
  */
 portBASE_TYPE xPortStartScheduler( void )
 {
-/** portBASE_TYPE xResult; */
+portBASE_TYPE xResult;
 int iSignal;
 sigset_t xSignals;
 sigset_t xSignalToBlock;
@@ -240,10 +240,8 @@ portLONG lIndex;
 
 	printf( "Cleaning Up, Exiting.\n" );
 	/* Cleanup the mutexes */
-	/** xResult = pthread_mutex_destroy( &xSuspendResumeThreadMutex ); */
-	pthread_mutex_destroy( &xSuspendResumeThreadMutex );
-	/** xResult = pthread_mutex_destroy( &xSingleThreadMutex ); */
-	pthread_mutex_destroy( &xSingleThreadMutex );
+	xResult = pthread_mutex_destroy( &xSuspendResumeThreadMutex );
+	xResult = pthread_mutex_destroy( &xSingleThreadMutex );
 	vPortFree( (void *)pxThreads );
 
 	/* Should not get here! */
@@ -254,14 +252,13 @@ portLONG lIndex;
 void vPortEndScheduler( void )
 {
 portBASE_TYPE xNumberOfThreads;
-/** portBASE_TYPE xResult; */
+portBASE_TYPE xResult;
 	for ( xNumberOfThreads = 0; xNumberOfThreads < MAX_NUMBER_OF_TASKS; xNumberOfThreads++ )
 	{
 		if ( ( pthread_t )NULL != pxThreads[ xNumberOfThreads ].hThread )
 		{
 			/* Kill all of the threads, they are in the detached state. */
-			pthread_cancel( pxThreads[ xNumberOfThreads ].hThread );
-			/** xResult = pthread_cancel( pxThreads[ xNumberOfThreads ].hThread ); */
+			xResult = pthread_cancel( pxThreads[ xNumberOfThreads ].hThread );
 		}
 	}
 
@@ -455,7 +452,7 @@ void vPortForciblyEndThread( void *pxTaskToDelete )
 xTaskHandle hTaskToDelete = ( xTaskHandle )pxTaskToDelete;
 pthread_t xTaskToDelete;
 pthread_t xTaskToResume;
-/** portBASE_TYPE xResult; */
+portBASE_TYPE xResult;
 
 	if ( 0 == pthread_mutex_lock( &xSingleThreadMutex ) )
 	{
@@ -476,8 +473,7 @@ pthread_t xTaskToResume;
 			{
 				/* Send a signal to wake the task so that it definitely cancels. */
 				pthread_testcancel();
-				pthread_cancel( xTaskToDelete );
-				/** xResult = pthread_cancel( xTaskToDelete ); */
+				xResult = pthread_cancel( xTaskToDelete );
 				/* Pthread Clean-up function will note the cancellation. */
 			}
 			(void)pthread_mutex_unlock( &xSingleThreadMutex );
@@ -582,16 +578,14 @@ void prvResumeSignalHandler(int sig)
 
 void prvResumeThread( pthread_t xThreadId )
 {
-/** portBASE_TYPE xResult; */
+portBASE_TYPE xResult;
 	if ( 0 == pthread_mutex_lock( &xSuspendResumeThreadMutex ) )
 	{
 		if ( pthread_self() != xThreadId )
 		{
-			pthread_kill( xThreadId, SIG_RESUME );
-			/** xResult = pthread_kill( xThreadId, SIG_RESUME ); */
+			xResult = pthread_kill( xThreadId, SIG_RESUME );
 		}
-		pthread_mutex_unlock( &xSuspendResumeThreadMutex );
-		/** xResult = pthread_mutex_unlock( &xSuspendResumeThreadMutex ); */
+		xResult = pthread_mutex_unlock( &xSuspendResumeThreadMutex );
 	}
 }
 /*-----------------------------------------------------------*/
